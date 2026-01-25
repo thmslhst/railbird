@@ -5,7 +5,7 @@ import Image from "next/image";
 import { SplatViewer } from "@/components/SplatViewer";
 import { UrlInput } from "@/components/UrlInput";
 
-const DEFAULT_SPLAT_URL = "/butterfly.spz";
+const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
 
 export default function Home() {
   const [splatUrl, setSplatUrl] = useState(DEFAULT_SPLAT_URL);
