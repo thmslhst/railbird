@@ -28,14 +28,7 @@ export function SplatViewer({ splatUrl, className }: SplatViewerProps) {
     const container = containerRef.current;
     if (!container) return;
 
-    const system = createRenderingSystem({
-      container,
-      onFrame: () => {
-        if (splatRef.current) {
-          splatRef.current.rotation.y += 0.005;
-        }
-      },
-    });
+    const system = createRenderingSystem({ container });
     systemRef.current = system;
     system.start();
 
