@@ -33,7 +33,7 @@ export function UrlInput({ defaultUrl, onUrlSubmit }: UrlInputProps) {
 
   if (!isExpanded) {
     return (
-      <div className="absolute top-4 left-4 z-10">
+      <div className="absolute top-4 right-4 z-10">
         <Button
           variant="outline"
           size="sm"
@@ -47,7 +47,7 @@ export function UrlInput({ defaultUrl, onUrlSubmit }: UrlInputProps) {
   }
 
   return (
-    <div className="absolute top-4 left-4 z-10 w-96 max-w-[calc(100vw-2rem)]">
+    <div className="absolute top-4 right-4 z-10 w-96 max-w-[calc(100vw-2rem)]">
       <form
         onSubmit={handleSubmit}
         className="bg-background/90 backdrop-blur-sm border rounded-lg p-4 shadow-lg"
