@@ -1,6 +1,6 @@
 # Splato
 
-A focused creative prototyping tool for **Gaussian Splatting**, **Three.js scenes**, and **scroll-driven camera rails**.
+Prototyping tool for **Gaussian Splatting** and **scroll-driven camera rails**.
 
 ## Getting Started
 

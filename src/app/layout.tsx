@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Splato",
-  description: "Creative prototyping tool for Gaussian Splatting and scroll-driven camera rails",
+  description: "Prototyping tool for Gaussian Splatting and scroll-driven camera rails",
 };
 
 export default function RootLayout({
