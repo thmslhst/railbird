@@ -203,12 +203,21 @@ export function EditorView({
       const mouse = getMousePosition(event);
       raycaster.setFromCamera(mouse, camera);
 
-      // Intersect with the grid plane (y = 0)
+      // Intersect with the drag plane (set dynamically based on camera view)
       const intersection = new THREE.Vector3();
       if (raycaster.ray.intersectPlane(dragPlane, intersection)) {
         return intersection;
       }
       return null;
+    }
+
+    // Update drag plane to face the camera, passing through a given point
+    function updateDragPlaneFromCamera(throughPoint: THREE.Vector3) {
+      const camera = viewport!.camera;
+      const cameraDirection = new THREE.Vector3();
+      camera.getWorldDirection(cameraDirection);
+      // Plane faces the camera, passing through the specified point
+      dragPlane.setFromNormalAndCoplanarPoint(cameraDirection, throughPoint);
     }
 
     function getHitPointMesh(event: MouseEvent): ControlPointMesh | null {
@@ -239,6 +248,9 @@ export function EditorView({
       if (!rail) return;
 
       if (mode === "create") {
+        // Set drag plane facing camera, through origin for new point creation
+        updateDragPlaneFromCamera(new THREE.Vector3(0, 0, 0));
+
         // Add a new control point at click position
         const point = getIntersectionPoint(event);
         if (point) {
@@ -259,10 +271,10 @@ export function EditorView({
           // Disable orbit controls while dragging
           viewport!.controls.enabled = false;
 
-          // Set drag plane to pass through the selected point
+          // Set drag plane facing camera, through the selected point
           const point = rail.getPoint(hitMesh.pointId);
           if (point) {
-            dragPlane.constant = -point.position.y;
+            updateDragPlaneFromCamera(point.position);
           }
         } else {
           onSelectPoint(null);
