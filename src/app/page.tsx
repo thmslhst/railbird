@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Image from "next/image";
 import { EditorView } from "@/components/EditorView";
 import { RailEditor, type EditorMode } from "@/components/RailEditor";
+import { SplatLoader } from "@/components/SplatLoader";
 import type { ControlPoint } from "@/systems/camera-rail";
 
 const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
@@ -45,17 +46,21 @@ export default function Home() {
         className="absolute top-4 left-4 z-10 h-6 w-auto"
         priority
       />
-      {/* Rail Editor - top right */}
-      <RailEditor
-        mode={editorMode}
-        onModeChange={setEditorMode}
-        controlPoints={controlPoints}
-        selectedPointId={selectedPointId}
-        onSelectPoint={setSelectedPointId}
-        onDeletePoint={handleDeletePoint}
-        defaultSplatUrl={DEFAULT_SPLAT_URL}
-        onUrlSubmit={handleUrlSubmit}
-      />
+      {/* Editor panels - top right */}
+      <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
+        <RailEditor
+          mode={editorMode}
+          onModeChange={setEditorMode}
+          controlPoints={controlPoints}
+          selectedPointId={selectedPointId}
+          onSelectPoint={setSelectedPointId}
+          onDeletePoint={handleDeletePoint}
+        />
+        <SplatLoader
+          defaultUrl={DEFAULT_SPLAT_URL}
+          onUrlSubmit={handleUrlSubmit}
+        />
+      </div>
     </main>
   );
 }
