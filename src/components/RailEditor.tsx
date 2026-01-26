@@ -1,19 +1,17 @@
 "use client";
 
 /**
- * RailEditor - UI component for managing camera rail control points.
- * Provides mode switching (create/edit) and a list of control points.
+ * RailEditor - UI component for displaying camera rail control points.
+ * Shows a list of control points with selection and deletion.
  */
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ControlPoint } from "@/systems/camera-rail";
 
-export type EditorMode = "view" | "create" | "edit";
+export type EditorMode = "select" | "create";
 
 interface RailEditorProps {
-  mode: EditorMode;
-  onModeChange: (mode: EditorMode) => void;
   controlPoints: ControlPoint[];
   selectedPointId: string | null;
   onSelectPoint: (id: string | null) => void;
@@ -21,8 +19,6 @@ interface RailEditorProps {
 }
 
 export function RailEditor({
-  mode,
-  onModeChange,
   controlPoints,
   selectedPointId,
   onSelectPoint,
@@ -33,39 +29,7 @@ export function RailEditor({
       <CardHeader className="pb-0">
         <CardTitle className="text-sm">Camera Rail</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Mode buttons */}
-        <div className="flex gap-2">
-          <Button
-            variant={mode === "create" ? "default" : "outline"}
-            size="sm"
-            onClick={() => onModeChange(mode === "create" ? "view" : "create")}
-            className="flex-1"
-          >
-            {mode === "create" ? "Adding..." : "Add Point"}
-          </Button>
-          <Button
-            variant={mode === "edit" ? "default" : "outline"}
-            size="sm"
-            onClick={() => onModeChange(mode === "edit" ? "view" : "edit")}
-            className="flex-1"
-          >
-            {mode === "edit" ? "Editing..." : "Edit Points"}
-          </Button>
-        </div>
-
-        {/* Instructions */}
-        {mode === "create" && (
-          <p className="text-xs text-muted-foreground">
-            Click on the scene to add control points
-          </p>
-        )}
-        {mode === "edit" && (
-          <p className="text-xs text-muted-foreground">
-            Click a point to select, then drag to move
-          </p>
-        )}
-
+      <CardContent className="space-y-2">
         {/* Control points list */}
         <div className="space-y-1">
           <div className="text-xs font-medium text-muted-foreground">

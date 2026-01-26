@@ -33,6 +33,7 @@ interface EditorViewProps {
   selectedPointId: string | null;
   onPointsChange: (points: ControlPoint[]) => void;
   onSelectPoint: (id: string | null) => void;
+  onModeChange: (mode: EditorMode) => void;
 }
 
 export function EditorView({
@@ -42,6 +43,7 @@ export function EditorView({
   selectedPointId,
   onPointsChange,
   onSelectPoint,
+  onModeChange,
 }: EditorViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneSystem | null>(null);
@@ -245,8 +247,10 @@ export function EditorView({
           const quaternion = camera.quaternion.clone();
           rail.addPoint(point, quaternion);
           syncPointMeshes();
+          // Auto-switch back to select mode after adding a point
+          onModeChange("select");
         }
-      } else if (mode === "edit") {
+      } else if (mode === "select") {
         // Check if clicking on a point mesh
         const hitMesh = getHitPointMesh(event);
         if (hitMesh) {
@@ -267,7 +271,7 @@ export function EditorView({
     }
 
     function handlePointerMove(event: MouseEvent) {
-      if (!isDraggingRef.current || mode !== "edit" || !selectedPointId) return;
+      if (!isDraggingRef.current || mode !== "select" || !selectedPointId) return;
 
       const rail = railRef.current;
       if (!rail) return;
@@ -286,8 +290,8 @@ export function EditorView({
       }
     }
 
-    // Only add listeners if in create or edit mode
-    if (mode === "create" || mode === "edit") {
+    // Only add listeners if in create or select mode
+    if (mode === "create" || mode === "select") {
       container.addEventListener("pointerdown", handlePointerDown);
       container.addEventListener("pointermove", handlePointerMove);
       container.addEventListener("pointerup", handlePointerUp);
@@ -300,7 +304,7 @@ export function EditorView({
       container.removeEventListener("pointerup", handlePointerUp);
       container.removeEventListener("pointerleave", handlePointerUp);
     };
-  }, [mode, selectedPointId, syncPointMeshes, onSelectPoint]);
+  }, [mode, selectedPointId, syncPointMeshes, onSelectPoint, onModeChange]);
 
   // Expose delete functionality
   useEffect(() => {
@@ -326,7 +330,7 @@ export function EditorView({
     <div
       ref={containerRef}
       className={className}
-      style={{ width: "100%", height: "100%", cursor: mode === "create" ? "crosshair" : mode === "edit" ? "pointer" : "default" }}
+      style={{ width: "100%", height: "100%", cursor: mode === "create" ? "crosshair" : "default" }}
     />
   );
 }

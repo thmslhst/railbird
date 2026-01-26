@@ -5,13 +5,14 @@ import Image from "next/image";
 import { EditorView } from "@/components/EditorView";
 import { RailEditor, type EditorMode } from "@/components/RailEditor";
 import { SplatLoader } from "@/components/SplatLoader";
+import { Toolbar } from "@/components/Toolbar";
 import type { ControlPoint } from "@/systems/camera-rail";
 
 const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
 
 export default function Home() {
   const [splatUrl, setSplatUrl] = useState(DEFAULT_SPLAT_URL);
-  const [editorMode, setEditorMode] = useState<EditorMode>("view");
+  const [editorMode, setEditorMode] = useState<EditorMode>("select");
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
 
@@ -36,6 +37,7 @@ export default function Home() {
         selectedPointId={selectedPointId}
         onPointsChange={setControlPoints}
         onSelectPoint={setSelectedPointId}
+        onModeChange={setEditorMode}
       />
       {/* Logo - top left */}
       <Image
@@ -49,8 +51,6 @@ export default function Home() {
       {/* Editor panels - top right */}
       <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
         <RailEditor
-          mode={editorMode}
-          onModeChange={setEditorMode}
           controlPoints={controlPoints}
           selectedPointId={selectedPointId}
           onSelectPoint={setSelectedPointId}
@@ -61,6 +61,8 @@ export default function Home() {
           onUrlSubmit={handleUrlSubmit}
         />
       </div>
+      {/* Bottom toolbar */}
+      <Toolbar mode={editorMode} onModeChange={setEditorMode} />
     </main>
   );
 }
