@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Image from "next/image";
-import { SplatViewer } from "@/components/SplatViewer";
+import { EditorView } from "@/components/EditorView";
 import { UrlInput } from "@/components/UrlInput";
 
 const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
@@ -15,8 +15,8 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative h-screen w-screen">
-      <SplatViewer splatUrl={splatUrl} className="h-full w-full" />
+    <main className="relative h-screen w-screen overflow-hidden">
+      <EditorView splatUrl={splatUrl} className="h-full w-full" />
       {/* Logo - top left */}
       <Image
         src="/splato.svg"
