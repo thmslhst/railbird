@@ -53,10 +53,12 @@ export function EditorView({
   const helperRef = useRef<ControlPointHelperSystem | null>(null);
   const pointMeshesRef = useRef<Map<string, ControlPointMesh>>(new Map());
 
-  // For drag handling
-  const isDraggingRef = useRef(false);
+  // For drag handling (position and rotation)
+  const isDraggingPositionRef = useRef(false);
+  const isDraggingRotationRef = useRef(false);
   const dragPlaneRef = useRef(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0));
   const raycasterRef = useRef(new THREE.Raycaster());
+  const lastMouseRef = useRef(new THREE.Vector2());
 
   // Sync point meshes with control points
   const syncPointMeshes = useCallback(() => {
@@ -189,6 +191,7 @@ export function EditorView({
 
     const raycaster = raycasterRef.current;
     const dragPlane = dragPlaneRef.current;
+    const lastMouse = lastMouseRef.current;
 
     function getMousePosition(event: MouseEvent): THREE.Vector2 {
       const rect = container!.getBoundingClientRect();
@@ -220,7 +223,12 @@ export function EditorView({
       dragPlane.setFromNormalAndCoplanarPoint(cameraDirection, throughPoint);
     }
 
-    function getHitPointMesh(event: MouseEvent): ControlPointMesh | null {
+    interface HitResult {
+      mesh: ControlPointMesh;
+      hitCone: boolean; // True if the cone was hit, false if sphere
+    }
+
+    function getHitPointMesh(event: MouseEvent): HitResult | null {
       const camera = viewport!.camera;
       const mouse = getMousePosition(event);
       raycaster.setFromCamera(mouse, camera);
@@ -229,11 +237,14 @@ export function EditorView({
       const intersects = raycaster.intersectObjects(meshes, true);
 
       if (intersects.length > 0) {
+        const hitObject = intersects[0].object;
+        const hitCone = hitObject.name === "cone";
+
         // Find the parent ControlPointMesh
-        let obj: THREE.Object3D | null = intersects[0].object;
+        let obj: THREE.Object3D | null = hitObject;
         while (obj) {
           if ("pointId" in obj) {
-            return obj as ControlPointMesh;
+            return { mesh: obj as ControlPointMesh, hitCone };
           }
           obj = obj.parent;
         }
@@ -246,6 +257,9 @@ export function EditorView({
 
       const rail = railRef.current;
       if (!rail) return;
+
+      // Store initial mouse position for rotation dragging
+      lastMouse.copy(getMousePosition(event));
 
       if (mode === "create") {
         // Set drag plane facing camera, through origin for new point creation
@@ -264,40 +278,101 @@ export function EditorView({
         }
       } else if (mode === "select") {
         // Check if clicking on a point mesh
-        const hitMesh = getHitPointMesh(event);
-        if (hitMesh) {
-          onSelectPoint(hitMesh.pointId);
-          isDraggingRef.current = true;
-          // Disable orbit controls while dragging
-          viewport!.controls.enabled = false;
+        const hitResult = getHitPointMesh(event);
+        if (hitResult) {
+          onSelectPoint(hitResult.mesh.pointId);
 
           // Set drag plane facing camera, through the selected point
-          const point = rail.getPoint(hitMesh.pointId);
+          const point = rail.getPoint(hitResult.mesh.pointId);
           if (point) {
             updateDragPlaneFromCamera(point.position);
           }
+
+          // Determine if we're rotating (cone clicked) or moving (sphere clicked)
+          if (hitResult.hitCone) {
+            // Rotation dragging
+            isDraggingRotationRef.current = true;
+            viewport!.controls.enabled = false;
+          } else {
+            // Position dragging
+            isDraggingPositionRef.current = true;
+            viewport!.controls.enabled = false;
+          }
         } else {
+          // Clicked on empty space - deselect
           onSelectPoint(null);
         }
       }
     }
 
     function handlePointerMove(event: MouseEvent) {
-      if (!isDraggingRef.current || mode !== "select" || !selectedPointId) return;
+      if (mode !== "select" || !selectedPointId) return;
 
       const rail = railRef.current;
-      if (!rail) return;
+      const helper = helperRef.current;
+      const sceneSystem = sceneRef.current;
+      if (!rail || !helper || !sceneSystem) return;
 
-      const point = getIntersectionPoint(event);
-      if (point) {
-        rail.updatePoint(selectedPointId, point);
-        syncPointMeshes();
+      if (isDraggingPositionRef.current) {
+        // Position dragging (sphere was clicked)
+        const point = getIntersectionPoint(event);
+        if (point) {
+          rail.updatePoint(selectedPointId, point);
+          syncPointMeshes();
+        }
+      } else if (isDraggingRotationRef.current) {
+        // Rotation dragging (cone was clicked)
+        const currentMouse = getMousePosition(event);
+        const deltaX = currentMouse.x - lastMouse.x;
+        const deltaY = currentMouse.y - lastMouse.y;
+        lastMouse.copy(currentMouse);
+
+        // Get the current point's quaternion
+        const controlPoint = rail.getPoint(selectedPointId);
+        if (!controlPoint) return;
+
+        // Rotation sensitivity
+        const sensitivity = 2.0;
+
+        // Create rotation from mouse delta
+        // Horizontal mouse movement → yaw (rotate around world Y axis)
+        // Vertical mouse movement → pitch (rotate around local X axis)
+        const yawDelta = deltaX * sensitivity;
+        const pitchDelta = deltaY * sensitivity;
+
+        // Create quaternions for yaw and pitch
+        const yawQuat = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(0, 1, 0),
+          yawDelta
+        );
+        const pitchQuat = new THREE.Quaternion().setFromAxisAngle(
+          new THREE.Vector3(1, 0, 0),
+          pitchDelta
+        );
+
+        // Apply rotations: yaw is applied in world space, pitch in local space
+        // newQuat = yawQuat * currentQuat * pitchQuat
+        const newQuat = new THREE.Quaternion()
+          .copy(yawQuat)
+          .multiply(controlPoint.quaternion)
+          .multiply(pitchQuat);
+
+        // Update the rail system
+        rail.updatePoint(selectedPointId, undefined, newQuat);
+
+        // Update visualization
+        const mesh = pointMeshesRef.current.get(selectedPointId);
+        if (mesh) {
+          helper.updatePointMesh(mesh, rail.getPoint(selectedPointId)!);
+        }
+        helper.updateRailLine(rail.controlPoints, sceneSystem.scene);
       }
     }
 
     function handlePointerUp() {
-      if (isDraggingRef.current) {
-        isDraggingRef.current = false;
+      if (isDraggingPositionRef.current || isDraggingRotationRef.current) {
+        isDraggingPositionRef.current = false;
+        isDraggingRotationRef.current = false;
         viewport!.controls.enabled = true;
       }
     }
