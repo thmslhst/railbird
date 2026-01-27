@@ -13,32 +13,37 @@ Splato is a camera rail editor for Gaussian Splatting scenes. The architecture s
 1. **Editor View** — Free camera navigation with OrbitControls, grid helper, for building and editing camera rails
 2. **Player View** — Rail-driven camera controlled by a normalized parameter `t ∈ [0, 1]`, for previewing the final result
 
-Both views render the **same scene** but with different camera systems and renderers.
+Each view has its **own scene and splat instance** to avoid WebGL state conflicts. They share the **camera rail system** for synchronized positioning.
 
 ---
 
 ## Directory Structure
 
-```
+```text
 src/
 ├── app/
 │   ├── layout.tsx          # Root layout with fonts and metadata
-│   ├── page.tsx            # Main entry point, renders EditorView
+│   ├── page.tsx            # Main entry point, orchestrates views
 │   └── globals.css         # Tailwind + CSS variables
 │
 ├── components/
 │   ├── EditorView.tsx      # React component for editor viewport
-│   ├── SplatViewer.tsx     # Legacy viewer (deprecated, kept for reference)
-│   ├── UrlInput.tsx        # UI for loading custom splat URLs
+│   ├── PlayerView.tsx      # React component for player preview
+│   ├── RailEditor.tsx      # Control points list panel
+│   ├── SplatLoader.tsx     # URL input for loading splats
+│   ├── Toolbar.tsx         # Mode selection toolbar
 │   └── ui/                 # shadcn/ui components
 │       ├── button.tsx
+│       ├── card.tsx
 │       └── input.tsx
 │
 ├── systems/
-│   ├── scene.ts            # Shared scene management
+│   ├── scene.ts            # Scene management
 │   ├── viewport.ts         # Base viewport (renderer + camera)
 │   ├── editor-viewport.ts  # Editor viewport with OrbitControls + grid
-│   └── rendering.ts        # Legacy rendering system (deprecated)
+│   ├── player-viewport.ts  # Player viewport with rail-driven camera
+│   ├── camera-rail.ts      # Camera rail system (control points + interpolation)
+│   └── control-point-helper.ts  # 3D visualization of control points
 │
 └── lib/
     └── utils.ts            # Utility functions (cn for classnames)
@@ -50,7 +55,7 @@ src/
 
 ### Scene System (`src/systems/scene.ts`)
 
-The scene system owns the shared `THREE.Scene` instance. It is decoupled from any viewport or renderer.
+The scene system owns a `THREE.Scene` instance. Each view creates its own scene to avoid WebGL state conflicts with SplatMesh.
 
 ```typescript
 interface SceneSystem {
@@ -61,7 +66,7 @@ interface SceneSystem {
 }
 ```
 
-**Key principle**: The scene is the single source of truth for all 3D objects (splats, meshes, helpers). Multiple viewports can render the same scene simultaneously.
+**Key principle**: Editor and Player have **isolated scenes** with separate splat instances. This prevents renderer-specific WebGL state from bleeding between viewports.
 
 ---
 
@@ -111,64 +116,126 @@ interface EditorViewport extends Viewport {
 
 ---
 
-### Player Viewport (Future: `src/systems/player-viewport.ts`)
+### Player Viewport (`src/systems/player-viewport.ts`)
 
-Will extend the base viewport with rail-driven camera:
+Extends the base viewport with rail-driven camera:
 
 - **Rail camera** — Position and rotation interpolated along the camera rail
 - **Parameter `t`** — Normalized progress `[0, 1]` along the rail
 - **No user camera controls** — Camera is fully deterministic
 
 ```typescript
-// Future interface
 interface PlayerViewport extends Viewport {
-  rail: CameraRail;
   setProgress: (t: number) => void;
+  getProgress: () => number;
 }
 ```
 
 ---
 
+### Camera Rail System (`src/systems/camera-rail.ts`)
+
+The camera rail manages control points that define the camera path. It maps `t ∈ [0, 1]` to a camera pose.
+
+```typescript
+interface ControlPoint {
+  id: string;
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+}
+
+interface CameraPose {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+}
+
+interface CameraRailSystem {
+  controlPoints: ControlPoint[];
+
+  // Control point management
+  addPoint: (position: THREE.Vector3, quaternion?: THREE.Quaternion) => ControlPoint;
+  removePoint: (id: string) => void;
+  updatePoint: (id: string, position?: THREE.Vector3, quaternion?: THREE.Quaternion) => void;
+  getPoint: (id: string) => ControlPoint | undefined;
+  reorderPoint: (id: string, newIndex: number) => void;
+
+  // Rail interpolation
+  getPose: (t: number) => CameraPose | null;
+
+  // Serialization
+  toJSON: () => ControlPointData[];
+  fromJSON: (data: ControlPointData[]) => void;
+
+  dispose: () => void;
+}
+```
+
+**Key principle**: The rail maps `t → camera pose`. It knows nothing about scroll, UI, or React. This enables:
+
+- Scroll-driven playback (scroll position → t → camera pose)
+- UI scrubbing (slider value → t → camera pose)
+- Animation export (keyframes at regular t intervals)
+
+**Interpolation**: Currently uses linear position lerp + quaternion SLERP between adjacent control points. Future: Catmull-Rom spline for smoother paths.
+
+---
+
 ## Data Flow
 
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                          React Layer                                 │
+│                                                                      │
+│  ┌──────────────┐                                                    │
+│  │   page.tsx   │ ─── manages state: splatUrl, editorMode, rail     │
+│  └──────┬───────┘                                                    │
+│         │                                                            │
+│         ├────────────────────┬───────────────────────┐               │
+│         ▼                    ▼                       ▼               │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────────┐       │
+│  │ EditorView   │    │ PlayerView   │    │ UI Panels        │       │
+│  │   .tsx       │    │   .tsx       │    │ (RailEditor,     │       │
+│  │              │    │              │    │  SplatLoader,    │       │
+│  │              │    │              │    │  Toolbar)        │       │
+│  └──────┬───────┘    └──────┬───────┘    └──────────────────┘       │
+│         │                   │                                        │
+└─────────│───────────────────│────────────────────────────────────────┘
+          │                   │
+          ▼                   ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Systems Layer                                 │
+│                                                                      │
+│  ┌──────────────────┐              ┌──────────────────┐             │
+│  │  Editor Scene    │              │  Player Scene    │             │
+│  │  • SplatMesh     │              │  • SplatMesh     │             │
+│  │  • GridHelper    │              │  (own instance)  │             │
+│  │  • ControlPoint  │              │                  │             │
+│  │    helpers       │              │                  │             │
+│  └────────┬─────────┘              └────────┬─────────┘             │
+│           │                                 │                        │
+│           ▼                                 ▼                        │
+│  ┌──────────────────┐              ┌──────────────────┐             │
+│  │ EditorViewport   │              │ PlayerViewport   │             │
+│  │ • OrbitControls  │              │ • setProgress(t) │             │
+│  │ • GridHelper     │              │ • Rail-driven    │             │
+│  └──────────────────┘              └──────────────────┘             │
+│                                                                      │
+│                    ┌──────────────────────┐                         │
+│                    │   CameraRailSystem   │ ◄─── SHARED             │
+│                    │   • controlPoints[]  │                         │
+│                    │   • getPose(t)       │                         │
+│                    └──────────────────────┘                         │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         React Layer                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐       │
-│  │   page.tsx   │───▶│ EditorView   │    │ PlayerView   │       │
-│  │              │    │   .tsx       │    │   .tsx       │       │
-│  └──────────────┘    └──────┬───────┘    └──────┬───────┘       │
-│         │                   │                   │                │
-│         │                   │                   │                │
-└─────────│───────────────────│───────────────────│────────────────┘
-          │                   │                   │
-          ▼                   ▼                   ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                       Systems Layer                              │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────┐       │
-│  │                   SceneSystem                         │       │
-│  │  • THREE.Scene (shared)                              │       │
-│  │  • SplatMesh, helpers, meshes                        │       │
-│  └──────────────────────────────────────────────────────┘       │
-│              │                           │                       │
-│              ▼                           ▼                       │
-│  ┌──────────────────────┐    ┌──────────────────────┐           │
-│  │   EditorViewport     │    │   PlayerViewport     │           │
-│  │  • WebGLRenderer     │    │  • WebGLRenderer     │           │
-│  │  • PerspectiveCamera │    │  • PerspectiveCamera │           │
-│  │  • OrbitControls     │    │  • CameraRail        │           │
-│  │  • GridHelper        │    │  • t parameter       │           │
-│  └──────────────────────┘    └──────────────────────┘           │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+**Key insight**: The camera rail is the only shared system between Editor and Player. Each has its own scene, splat, and renderer to avoid WebGL conflicts.
 
 ---
 
 ## React Integration
 
-React is used for **lifecycle orchestration only**. Three.js objects are stored in refs, never in state.
+React is used for **lifecycle orchestration only**. Three.js objects are stored in refs, never in state (except for objects needed for conditional rendering).
 
 ```typescript
 // EditorView.tsx pattern
@@ -188,32 +255,25 @@ useEffect(() => {
 }, []);
 ```
 
+**Exception**: The `CameraRailSystem` is stored in React state at the page level because PlayerView's rendering depends on its presence.
+
 ---
 
-## Camera Rail System (Planned)
+## PlayerView Architecture
 
-The camera rail will be implemented as a pure, deterministic system:
+PlayerView is a self-contained preview component:
+
+- **Card UI** at bottom-left with aspect-ratio viewport
+- **Scroll-bound animation**: scroll within the card maps to `t ∈ [0, 1]`
+- **Fullscreen mode**: expands to fill screen, scroll controls playback
+- **Own scene + splat**: isolated from editor to prevent WebGL conflicts
 
 ```typescript
-// Future interface
-interface CameraRail {
-  // Get camera pose at normalized position t
-  getPose: (t: number) => { position: THREE.Vector3; quaternion: THREE.Quaternion };
-
-  // Control points for editing
-  controlPoints: ControlPoint[];
-
-  // Serialization for export
-  toJSON: () => RailConfig;
-  fromJSON: (config: RailConfig) => void;
+interface PlayerViewProps {
+  splatUrl: string;           // Loads own splat instance
+  rail: CameraRailSystem;     // Shared rail for camera positioning
 }
 ```
-
-**Key principle**: The rail maps `t → camera pose`. It knows nothing about scroll, UI, or React. This enables:
-
-- Scroll-driven playback (scroll position → t → camera pose)
-- UI scrubbing (slider value → t → camera pose)
-- Animation export (keyframes at regular t intervals)
 
 ---
 
@@ -232,27 +292,125 @@ sceneSystem.add(splat);
 
 Spark.js is an **implementation detail**. The architecture does not depend on it — splats behave like any other `THREE.Object3D`.
 
+**Important**: SplatMesh has renderer-specific WebGL state. Multiple renderers cannot share the same SplatMesh instance. Each viewport that needs to display a splat must load its own instance.
+
 Supported formats: `.spz`, `.splat`, `.ply`
+
+---
+
+## Export Strategy
+
+Splato's export is designed for **scroll-driven storytelling on websites** (landing pages, portfolios, etc.).
+
+### The Core Question: JSON Config vs. Scene Bundle?
+
+The PlayerView forms what looks like a complete, exportable scene — splat + camera rail + scroll binding. Why not bundle and export the whole thing?
+
+**The scene isn't actually portable.**
+
+What looks like "the scene" is really: Spark.js + Three.js + specific WebGL state + render loop timing. Export that as a bundle and consumers are locked to exact dependency versions. When Spark.js ships a breaking change, exported bundles break.
+
+**Shaders and lighting make bundling worse, not better.**
+
+Future features like GLSL shaders and lighting *strengthen* the case for JSON. A shader is uniforms + source code. Lighting is parameters. These are **data**, not implementations. Export them as config, and the consumer's player interprets them — maybe they use a different shader compiler, maybe they're on WebGPU.
+
+**The real product isn't the scene — it's the camera path.**
+
+What Splato creates that's *actually valuable* is the camera rail. The splat already exists elsewhere (hosted asset). The consumer already has Three.js. What they *don't* have is a good way to author scroll-driven camera animation. That's the export.
+
+**The right mental model: Figma → CSS, not Figma → static image.**
+
+Figma doesn't export a "rendered website." It exports design tokens, specs, and code snippets that developers integrate. Splato should do the same: export the *creative intent* (rail, timing, splat reference), let the consumer handle rendering.
+
+---
+
+### Export Format: JSON Configuration
+
+```typescript
+interface SplatoExport {
+  version: string;
+  splat: {
+    url: string;              // Splat asset URL (hosted separately)
+    position?: [number, number, number];
+    rotation?: [number, number, number, number];
+  };
+  rail: {
+    controlPoints: ControlPointData[];
+    interpolation?: "linear" | "catmull-rom";
+  };
+  // Future extensions:
+  // camera?: { fov?: number; near?: number; far?: number; };
+  // shaders?: { ... };
+  // lighting?: { ... };
+}
+```
+
+### Why JSON over Scene Bundle?
+
+1. **Separation of data vs. implementation**: The rail is pure data. The rendering implementation (Three.js version, Spark.js version, custom shaders) is the consumer's choice.
+
+2. **Future-proofing**: Adding shaders, lighting, post-processing — these are config options, not bundled code. The consumer's player can interpret them.
+
+3. **Size**: Splat files can be 10-100MB+. They should be hosted as assets, not bundled in exports.
+
+4. **Flexibility**: Consumers can customize playback behavior, add their own effects, or use different splat libraries.
+
+5. **Longevity**: JSON configs remain valid across library upgrades. Bundled WebGL code doesn't.
+
+---
+
+### What Gets Shipped
+
+```text
+Export: splato-config.json (~5KB)
+├── rail: control points, interpolation mode
+├── splat: { url: "https://cdn.../model.spz", transform: {...} }
+└── meta: { version, createdAt }
+
++ @splato/player (tree-shakeable, ~30KB gzipped)
+    └── drop-in scroll-driven splat player
+```
+
+The consumer either uses the player package, or reads the JSON and rolls their own. Either way, they're not locked to Splato's implementation choices.
+
+---
+
+### Embeddable Player (Future)
+
+A lightweight `@splato/player` package that consumes the JSON config:
+
+```html
+<script type="module">
+  import { SplatoPlayer } from '@splato/player';
+
+  const player = new SplatoPlayer({
+    container: document.getElementById('hero'),
+    config: '/path/to/export.json',
+    scrollContainer: window,  // or a specific element
+  });
+</script>
+```
+
+This keeps Splato (the editor) separate from the runtime (the player), enabling independent evolution of both.
 
 ---
 
 ## Future Roadmap
 
-1. **Camera Rail System**
-   - Control point creation and editing
-   - Interpolation (Catmull-Rom or similar)
-   - Visual rail preview in editor
+1. **Rail Interpolation**
+   - Catmull-Rom spline for smoother camera paths
+   - Easing functions per segment
 
-2. **Player View**
-   - Rail-driven camera
-   - Scroll binding (`scroll position → t`)
-   - Fullscreen preview mode
+2. **Export System**
+   - JSON config export
+   - Embeddable player library
 
-3. **Rail Editor UI**
-   - Control point manipulation
-   - Timeline/progress slider
-   - Rail visualization overlays
+3. **Enhanced Rail Editor**
+   - Timeline/progress scrubber
+   - Keyframe easing controls
+   - Path preview visualization
 
-4. **Export**
-   - Rail configuration export (JSON)
-   - Embeddable player component
+4. **Scene Enhancements**
+   - Multiple splats
+   - Basic lighting controls
+   - GLSL shader presets
