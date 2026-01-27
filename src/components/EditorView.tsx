@@ -34,6 +34,12 @@ interface EditorViewProps {
   onPointsChange: (points: ControlPoint[]) => void;
   onSelectPoint: (id: string | null) => void;
   onModeChange: (mode: EditorMode) => void;
+  /** Optional external scene system (for sharing with PlayerView) */
+  sceneSystem?: SceneSystem;
+  /** Optional external rail system (for sharing with PlayerView) */
+  railSystem?: CameraRailSystem;
+  /** Called when internal systems are initialized (if not provided externally) */
+  onSystemsReady?: (scene: SceneSystem, rail: CameraRailSystem) => void;
 }
 
 export function EditorView({
@@ -44,6 +50,9 @@ export function EditorView({
   onPointsChange,
   onSelectPoint,
   onModeChange,
+  sceneSystem: externalSceneSystem,
+  railSystem: externalRailSystem,
+  onSystemsReady,
 }: EditorViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneSystem | null>(null);
@@ -104,8 +113,11 @@ export function EditorView({
     const container = containerRef.current;
     if (!container) return;
 
-    // Create shared scene system
-    const sceneSystem = createSceneSystem();
+    // Use external systems if provided, otherwise create internal ones
+    const ownsScene = !externalSceneSystem;
+    const ownsRail = !externalRailSystem;
+
+    const sceneSystem = externalSceneSystem ?? createSceneSystem();
     sceneRef.current = sceneSystem;
 
     // Create editor viewport
@@ -116,13 +128,16 @@ export function EditorView({
     viewportRef.current = viewport;
     viewport.start();
 
-    // Create camera rail system
-    const rail = createCameraRailSystem();
+    // Use external or create camera rail system
+    const rail = externalRailSystem ?? createCameraRailSystem();
     railRef.current = rail;
 
     // Create control point helper system
     const helper = createControlPointHelperSystem();
     helperRef.current = helper;
+
+    // Notify parent of systems (for sharing with PlayerView)
+    onSystemsReady?.(sceneSystem, rail);
 
     return () => {
       // Clean up point meshes
@@ -135,16 +150,19 @@ export function EditorView({
 
       helper.disposeRailLine(sceneSystem.scene);
       helper.dispose();
-      rail.dispose();
+
+      // Only dispose systems we own
+      if (ownsRail) rail.dispose();
       viewport.dispose();
-      sceneSystem.dispose();
+      if (ownsScene) sceneSystem.dispose();
+
       viewportRef.current = null;
       sceneRef.current = null;
       splatRef.current = null;
       railRef.current = null;
       helperRef.current = null;
     };
-  }, []);
+  }, [externalSceneSystem, externalRailSystem, onSystemsReady]);
 
   // Load/swap splat when URL changes
   useEffect(() => {

@@ -3,10 +3,12 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 import { EditorView } from "@/components/EditorView";
+import { PlayerView } from "@/components/PlayerView";
 import { RailEditor, type EditorMode } from "@/components/RailEditor";
 import { SplatLoader } from "@/components/SplatLoader";
 import { Toolbar } from "@/components/Toolbar";
-import type { ControlPoint } from "@/systems/camera-rail";
+import type { ControlPoint, CameraRailSystem } from "@/systems/camera-rail";
+import type { SceneSystem } from "@/systems/scene";
 
 const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
 
@@ -15,9 +17,15 @@ export default function Home() {
   const [editorMode, setEditorMode] = useState<EditorMode>("select");
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
+  // Rail system stored in state since we render based on its presence
+  const [railSystem, setRailSystem] = useState<CameraRailSystem | null>(null);
 
   const handleUrlSubmit = useCallback((url: string) => {
     setSplatUrl(url);
+  }, []);
+
+  const handleSystemsReady = useCallback((_scene: SceneSystem, rail: CameraRailSystem) => {
+    setRailSystem(rail);
   }, []);
 
   const handleDeletePoint = useCallback((id: string) => {
@@ -38,6 +46,7 @@ export default function Home() {
         onPointsChange={setControlPoints}
         onSelectPoint={setSelectedPointId}
         onModeChange={setEditorMode}
+        onSystemsReady={handleSystemsReady}
       />
       {/* Logo - top left */}
       <Image
@@ -48,6 +57,15 @@ export default function Home() {
         className="absolute top-4 left-4 z-10 h-6 w-auto"
         priority
       />
+      {/* Player preview - bottom left */}
+      {railSystem && (
+        <div className="absolute bottom-4 left-4 z-10 w-64">
+          <PlayerView
+            splatUrl={splatUrl}
+            rail={railSystem}
+          />
+        </div>
+      )}
       {/* Editor panels - top right */}
       <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
         <RailEditor

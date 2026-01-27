@@ -1,0 +1,249 @@
+"use client";
+
+/**
+ * PlayerView - A preview card showing rail-driven camera animation.
+ * Scroll within the card controls the camera position along the rail.
+ * Supports fullscreen preview mode.
+ *
+ * Note: PlayerView creates its own scene and splat instance to avoid
+ * WebGL state conflicts when multiple renderers share the same SplatMesh.
+ * It shares the camera rail with the editor for synchronized positioning.
+ */
+
+import { useEffect, useRef, useState, useCallback } from "react";
+import { SplatMesh } from "@sparkjsdev/spark";
+import { Maximize2, Minimize2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { createSceneSystem, type SceneSystem } from "@/systems/scene";
+import {
+  createPlayerViewport,
+  type PlayerViewport,
+} from "@/systems/player-viewport";
+import type { CameraRailSystem } from "@/systems/camera-rail";
+
+interface PlayerViewProps {
+  splatUrl: string;
+  rail: CameraRailSystem;
+  className?: string;
+}
+
+export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<SceneSystem | null>(null);
+  const viewportRef = useRef<PlayerViewport | null>(null);
+  const splatRef = useRef<SplatMesh | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  // Initialize scene and player viewport
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Create own scene (separate from editor to avoid WebGL conflicts)
+    const sceneSystem = createSceneSystem();
+    sceneRef.current = sceneSystem;
+
+    const viewport = createPlayerViewport({
+      container,
+      scene: sceneSystem.scene,
+      rail,
+    });
+    viewportRef.current = viewport;
+    viewport.start();
+
+    return () => {
+      viewport.dispose();
+      sceneSystem.dispose();
+      viewportRef.current = null;
+      sceneRef.current = null;
+    };
+  }, [rail]);
+
+  // Load splat when URL changes
+  useEffect(() => {
+    const sceneSystem = sceneRef.current;
+    if (!sceneSystem) return;
+
+    // Remove existing splat
+    if (splatRef.current) {
+      sceneSystem.remove(splatRef.current);
+      splatRef.current.dispose();
+      splatRef.current = null;
+    }
+
+    // Load new splat
+    const splat = new SplatMesh({ url: splatUrl });
+    splat.position.set(0, 0, 0);
+    splat.quaternion.set(1, 0, 0, 0);
+    splatRef.current = splat;
+    sceneSystem.add(splat);
+
+    return () => {
+      if (splatRef.current && sceneRef.current) {
+        sceneRef.current.remove(splatRef.current);
+        splatRef.current.dispose();
+        splatRef.current = null;
+      }
+    };
+  }, [splatUrl]);
+
+  // Handle scroll to update progress
+  const handleScroll = useCallback(() => {
+    const scrollContainer = scrollContainerRef.current;
+    const viewport = viewportRef.current;
+    if (!scrollContainer || !viewport) return;
+
+    const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+    if (scrollHeight <= 0) return;
+
+    const t = scrollContainer.scrollTop / scrollHeight;
+    viewport.setProgress(t);
+    setProgress(t);
+  }, []);
+
+  // Update camera when rail changes (control points added/removed)
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    // Re-apply current progress to update camera if rail changed
+    viewport.setProgress(progress);
+  }, [rail.controlPoints.length, progress]);
+
+  // Handle fullscreen toggle
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen((prev) => !prev);
+  }, []);
+
+  // Handle escape key to exit fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsFullscreen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isFullscreen]);
+
+  // Resize viewport when fullscreen changes
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    // Small delay to allow DOM to update
+    const timeoutId = setTimeout(() => {
+      viewport.resize();
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [isFullscreen]);
+
+  const progressPercent = Math.round(progress * 100);
+  const hasRailPoints = rail.controlPoints.length > 0;
+
+  // Fullscreen mode
+  if (isFullscreen) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black">
+        {/* Fullscreen viewport */}
+        <div ref={containerRef} className="absolute inset-0" />
+
+        {/* Scroll overlay - invisible but captures scroll */}
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="absolute inset-0 overflow-y-auto"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {/* Scrollable content - height determines scroll range */}
+          <div style={{ height: "300vh" }} />
+        </div>
+
+        {/* Fullscreen controls overlay */}
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <div className="bg-background/80 backdrop-blur-sm rounded-md px-3 py-1.5 text-sm font-medium">
+            {progressPercent}%
+          </div>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            onClick={toggleFullscreen}
+            className="bg-background/80 backdrop-blur-sm"
+            title="Exit fullscreen (Esc)"
+          >
+            <Minimize2 className="size-4" />
+          </Button>
+        </div>
+
+        {/* Scroll hint */}
+        {hasRailPoints && (
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 text-sm animate-pulse">
+            Scroll to preview animation
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Card mode (bottom-left)
+  return (
+    <Card className={`bg-background/90 backdrop-blur-sm py-3 gap-2 ${className}`}>
+      <CardHeader className="pb-0 flex flex-row items-center justify-between">
+        <CardTitle className="text-sm">Preview</CardTitle>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground tabular-nums">
+            {progressPercent}%
+          </span>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={toggleFullscreen}
+            disabled={!hasRailPoints}
+            title="Fullscreen preview"
+          >
+            <Maximize2 className="size-3.5" />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {/* Preview viewport */}
+        <div className="relative aspect-video rounded-md overflow-hidden bg-muted">
+          <div ref={containerRef} className="absolute inset-0" />
+
+          {/* Scroll overlay inside the card viewport */}
+          <div
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="absolute inset-0 overflow-y-auto"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {/* Scrollable content */}
+            <div style={{ height: "500%" }} />
+          </div>
+
+          {/* Empty state */}
+          {!hasRailPoints && (
+            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-xs">
+              Add rail points to preview
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar */}
+        <div className="h-1 bg-muted rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all duration-75"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
