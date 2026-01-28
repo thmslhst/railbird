@@ -286,9 +286,17 @@ export function EditorView({
         // Add a new control point at click position
         const point = getIntersectionPoint(event);
         if (point) {
-          // Use current camera orientation for the new point
-          const camera = viewport!.camera;
-          const quaternion = camera.quaternion.clone();
+          // Compute quaternion to look at scene center (origin)
+          const lookAtTarget = new THREE.Vector3(0, 0, 0);
+          const tempObject = new THREE.Object3D();
+          tempObject.position.copy(point);
+          tempObject.lookAt(lookAtTarget);
+          // Flip 180° around Y axis (Three.js lookAt faces -Z, camera faces +Z)
+          const flip = new THREE.Quaternion().setFromAxisAngle(
+            new THREE.Vector3(0, 1, 0),
+            Math.PI
+          );
+          const quaternion = tempObject.quaternion.clone().multiply(flip);
           rail.addPoint(point, quaternion);
           syncPointMeshes();
           // Auto-switch back to select mode after adding a point
