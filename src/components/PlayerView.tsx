@@ -3,7 +3,7 @@
 /**
  * PlayerView - A preview card showing rail-driven camera animation.
  * Scroll within the card controls the camera position along the rail.
- * Supports fullscreen preview mode.
+ * Supports expanded mode for larger preview.
  *
  * Note: PlayerView creates its own scene and splat instance to avoid
  * WebGL state conflicts when multiple renderers share the same SplatMesh.
@@ -34,7 +34,7 @@ export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
   const sceneRef = useRef<SceneSystem | null>(null);
   const viewportRef = useRef<PlayerViewport | null>(null);
   const splatRef = useRef<SplatMesh | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   const [progress, setProgress] = useState(0);
 
   // Initialize scene and player viewport
@@ -124,88 +124,49 @@ export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
     }
   }, [rail.controlPoints.length, progress]);
 
-  // Handle fullscreen toggle
-  const toggleFullscreen = useCallback(() => {
-    setIsFullscreen((prev) => !prev);
+  // Toggle expanded mode
+  const toggleExpanded = useCallback(() => {
+    setIsExpanded((prev) => !prev);
   }, []);
 
-  // Handle escape key to exit fullscreen
+  // Handle escape key to collapse
   useEffect(() => {
-    if (!isFullscreen) return;
+    if (!isExpanded) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setIsFullscreen(false);
+        setIsExpanded(false);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFullscreen]);
+  }, [isExpanded]);
 
-  // Resize viewport when fullscreen changes
+  // Resize viewport when container size changes
   useEffect(() => {
+    const container = containerRef.current;
     const viewport = viewportRef.current;
-    if (!viewport) return;
+    if (!container || !viewport) return;
 
-    // Small delay to allow DOM to update
-    const timeoutId = setTimeout(() => {
+    const resizeObserver = new ResizeObserver(() => {
       viewport.resize();
-    }, 50);
+    });
 
-    return () => clearTimeout(timeoutId);
-  }, [isFullscreen]);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   const progressPercent = Math.round(progress * 100);
   const hasRailPoints = rail.controlPoints.length > 0;
 
-  // Fullscreen mode
-  if (isFullscreen) {
-    return (
-      <div className="fixed inset-0 z-50 bg-black">
-        {/* Fullscreen viewport */}
-        <div ref={containerRef} className="absolute inset-0" />
-
-        {/* Scroll overlay - invisible but captures scroll */}
-        <div
-          ref={scrollContainerRef}
-          onScroll={handleScroll}
-          className="absolute inset-0 overflow-y-auto"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {/* Scrollable content - height determines scroll range */}
-          <div style={{ height: "300vh" }} />
-        </div>
-
-        {/* Fullscreen controls overlay */}
-        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
-          <div className="bg-background/80 backdrop-blur-sm rounded-md px-3 py-1.5 text-sm font-medium">
-            {progressPercent}%
-          </div>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            onClick={toggleFullscreen}
-            className="bg-background/80 backdrop-blur-sm"
-            title="Exit fullscreen (Esc)"
-          >
-            <Minimize2 className="size-4" />
-          </Button>
-        </div>
-
-        {/* Scroll hint */}
-        {hasRailPoints && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/60 text-sm animate-pulse">
-            Scroll to preview animation
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // Card mode (bottom-left)
   return (
-    <Card className={`bg-background/90 backdrop-blur-sm py-3 gap-2 ${className}`}>
+    <Card
+      className={`bg-background/90 backdrop-blur-sm py-3 gap-2 transition-all duration-200 ${
+        isExpanded ? "w-[50vw]" : "w-96"
+      } ${className}`}
+    >
       <CardHeader className="pb-0 flex flex-row items-center justify-between">
         <CardTitle className="text-sm">Preview</CardTitle>
         <div className="flex items-center gap-2">
@@ -215,11 +176,15 @@ export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={toggleFullscreen}
+            onClick={toggleExpanded}
             disabled={!hasRailPoints}
-            title="Fullscreen preview"
+            title={isExpanded ? "Collapse preview (Esc)" : "Expand preview"}
           >
-            <Maximize2 className="size-3.5" />
+            {isExpanded ? (
+              <Minimize2 className="size-3.5" />
+            ) : (
+              <Maximize2 className="size-3.5" />
+            )}
           </Button>
         </div>
       </CardHeader>
