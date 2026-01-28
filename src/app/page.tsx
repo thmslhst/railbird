@@ -59,7 +59,7 @@ export default function Home() {
       />
       {/* Player preview - bottom left */}
       {railSystem && (
-        <div className="absolute bottom-4 left-4 z-10 w-64">
+        <div className="absolute bottom-4 left-4 z-10 w-[24rem]">
           <PlayerView
             splatUrl={splatUrl}
             rail={railSystem}
