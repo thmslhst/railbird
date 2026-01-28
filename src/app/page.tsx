@@ -50,11 +50,11 @@ export default function Home() {
       />
       {/* Logo - top left */}
       <Image
-        src="/splato.svg"
+        src="/splato_.svg"
         alt="Splato"
         width={94}
         height={36}
-        className="absolute top-4 left-4 z-10 h-6 w-auto"
+        className="absolute top-4 left-4 z-10 h-8 w-auto"
         priority
       />
       {/* Player preview - bottom left */}
