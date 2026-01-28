@@ -52,7 +52,11 @@ export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
       rail,
     });
     viewportRef.current = viewport;
-    viewport.start();
+
+    // Only start rendering if rail has control points
+    if (rail.controlPoints.length > 0) {
+      viewport.start();
+    }
 
     return () => {
       viewport.dispose();
@@ -104,13 +108,20 @@ export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
     setProgress(t);
   }, []);
 
-  // Update camera when rail changes (control points added/removed)
+  // Start/stop viewport and update camera when rail changes
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
-    // Re-apply current progress to update camera if rail changed
-    viewport.setProgress(progress);
+    const hasPoints = rail.controlPoints.length > 0;
+    if (hasPoints) {
+      // Start viewport and update camera position
+      viewport.start();
+      viewport.setProgress(progress);
+    } else {
+      // Stop rendering when no rail points exist
+      viewport.stop();
+    }
   }, [rail.controlPoints.length, progress]);
 
   // Handle fullscreen toggle
