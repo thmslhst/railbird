@@ -40,7 +40,7 @@ export function RailEditor({
               No points yet
             </p>
           ) : (
-            <div className="max-h-48 overflow-y-auto space-y-1">
+            <div className="max-h-48 overflow-y-auto scrollbar-hide space-y-1">
               {controlPoints.map((point, index) => (
                 <div
                   key={point.id}
