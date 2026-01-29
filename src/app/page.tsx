@@ -63,6 +63,8 @@ export default function Home() {
           <PlayerView
             splatUrl={splatUrl}
             rail={railSystem}
+            controlPoints={controlPoints}
+            selectedPointId={selectedPointId}
           />
         </div>
       )}

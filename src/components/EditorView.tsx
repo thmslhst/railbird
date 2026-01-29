@@ -421,12 +421,8 @@ export function EditorView({
         // Update the rail system
         rail.updatePoint(selectedPointId, undefined, newQuat);
 
-        // Update visualization
-        const mesh = pointMeshesRef.current.get(selectedPointId);
-        if (mesh) {
-          helper.updatePointMesh(mesh, rail.getPoint(selectedPointId)!);
-        }
-        helper.updateRailLine(rail.controlPoints, sceneSystem.scene);
+        // Sync point meshes and notify parent of changes (for PlayerView sync)
+        syncPointMeshes();
       }
     }
 

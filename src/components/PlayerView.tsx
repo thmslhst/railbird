@@ -20,15 +20,17 @@ import {
   createPlayerViewport,
   type PlayerViewport,
 } from "@/systems/player-viewport";
-import type { CameraRailSystem } from "@/systems/camera-rail";
+import type { CameraRailSystem, ControlPoint } from "@/systems/camera-rail";
 
 interface PlayerViewProps {
   splatUrl: string;
   rail: CameraRailSystem;
+  controlPoints: ControlPoint[];
+  selectedPointId: string | null;
   className?: string;
 }
 
-export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
+export function PlayerView({ splatUrl, rail, controlPoints, selectedPointId, className }: PlayerViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<SceneSystem | null>(null);
@@ -142,6 +144,31 @@ export function PlayerView({ splatUrl, rail, className }: PlayerViewProps) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isExpanded]);
+
+  // Sync scroll position and camera when a rail point is selected
+  useEffect(() => {
+    if (!selectedPointId) return;
+
+    const scrollContainer = scrollContainerRef.current;
+    const viewport = viewportRef.current;
+    if (!scrollContainer || !viewport) return;
+
+    // Find index of selected point
+    const pointIndex = controlPoints.findIndex((p) => p.id === selectedPointId);
+    if (pointIndex === -1) return;
+
+    // Calculate t value: evenly distributed along [0, 1]
+    const t = controlPoints.length > 1 ? pointIndex / (controlPoints.length - 1) : 0;
+
+    // Update camera progress
+    viewport.setProgress(t);
+
+    // Update scroll position - this will trigger handleScroll which updates progress state
+    const scrollHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+    if (scrollHeight > 0) {
+      scrollContainer.scrollTop = t * scrollHeight;
+    }
+  }, [selectedPointId, controlPoints]);
 
   // Resize viewport when container size changes
   useEffect(() => {
