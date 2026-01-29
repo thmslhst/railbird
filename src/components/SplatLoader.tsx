@@ -11,10 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SplatLoaderProps {
   defaultUrl: string;
+  currentUrl: string;
   onUrlSubmit: (url: string) => void;
 }
 
-export function SplatLoader({ defaultUrl, onUrlSubmit }: SplatLoaderProps) {
+export function SplatLoader({ defaultUrl, currentUrl, onUrlSubmit }: SplatLoaderProps) {
   const [urlInputValue, setUrlInputValue] = useState("");
 
   const handleSubmit = useCallback(
@@ -46,7 +47,7 @@ export function SplatLoader({ defaultUrl, onUrlSubmit }: SplatLoaderProps) {
             placeholder="https://example.com/model.spz"
             value={urlInputValue}
             onChange={(e) => setUrlInputValue(e.target.value)}
-            className="text-xs"
+            className="text-xs placeholder:text-xs"
           />
           <p className="text-xs text-muted-foreground">
             Supports .spz, .splat, .ply
@@ -55,9 +56,11 @@ export function SplatLoader({ defaultUrl, onUrlSubmit }: SplatLoaderProps) {
             <Button type="submit" size="xs" disabled={!urlInputValue.trim()}>
               Load
             </Button>
-            <Button type="button" variant="outline" size="xs" onClick={handleReset}>
-              Reset to Default
-            </Button>
+            {currentUrl !== defaultUrl && (
+              <Button type="button" variant="outline" size="xs" onClick={handleReset}>
+                Reset to default
+              </Button>
+            )}
           </div>
         </form>
       </CardContent>

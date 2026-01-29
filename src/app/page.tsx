@@ -70,6 +70,7 @@ export default function Home() {
       <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
         <SplatLoader
           defaultUrl={DEFAULT_SPLAT_URL}
+          currentUrl={splatUrl}
           onUrlSubmit={handleUrlSubmit}
         />
         <RailEditor
