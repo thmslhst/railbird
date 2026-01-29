@@ -360,10 +360,45 @@ export function EditorView({
         // Rotation sensitivity
         const sensitivity = 2.0;
 
-        // Create rotation from mouse delta
-        // Horizontal mouse movement → yaw (rotate around world Y axis)
-        // Vertical mouse movement → pitch (rotate around local X axis)
-        const yawDelta = deltaX * sensitivity;
+        // Calculate yaw sign based on screen-space projection of the rotation effect.
+        // The goal: dragging right should always move the cone tip right on screen.
+        const camera = viewport!.camera;
+        const cameraForward = new THREE.Vector3();
+        camera.getWorldDirection(cameraForward);
+
+        // Get the cone's forward direction from the control point's quaternion
+        const coneForward = new THREE.Vector3(0, 0, -1).applyQuaternion(
+          controlPoint.quaternion
+        );
+
+        // Derivative of cone forward with respect to yaw (rotation around world Y).
+        // For a vector (x, y, z), rotating by δ around Y gives:
+        // new_x = x*cos(δ) + z*sin(δ), new_z = -x*sin(δ) + z*cos(δ)
+        // So d(forward)/d(yaw) = (forward.z, 0, -forward.x)
+        const dForward_dYaw = new THREE.Vector3(
+          coneForward.z,
+          0,
+          -coneForward.x
+        );
+
+        // Camera's right vector (screen-right direction in world space)
+        const cameraRight = new THREE.Vector3();
+        cameraRight
+          .crossVectors(cameraForward, new THREE.Vector3(0, 1, 0))
+          .normalize();
+
+        // If positive yaw moves the cone tip towards camera's right (screen-right),
+        // then yawSign = 1. Otherwise, invert so dragging right always moves tip right.
+        const yawScreenDirection = dForward_dYaw.dot(cameraRight);
+        const yawSign =
+          Math.abs(yawScreenDirection) < 0.001
+            ? 1
+            : yawScreenDirection > 0
+              ? 1
+              : -1;
+
+        // Create rotation from mouse delta with camera-relative adjustments
+        const yawDelta = deltaX * sensitivity * yawSign;
         const pitchDelta = deltaY * sensitivity;
 
         // Create quaternions for yaw and pitch
