@@ -17,14 +17,30 @@ interface SplatLoaderProps {
 
 export function SplatLoader({ defaultUrl, currentUrl, onUrlSubmit }: SplatLoaderProps) {
   const [urlInputValue, setUrlInputValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       const trimmed = urlInputValue.trim();
-      if (trimmed) {
+      if (!trimmed) return;
+
+      setError(null);
+      setIsLoading(true);
+
+      try {
+        const response = await fetch(trimmed, { method: "HEAD" });
+        if (!response.ok) {
+          setError(`Failed to load: ${response.status} ${response.statusText}`);
+          return;
+        }
         onUrlSubmit(trimmed);
         setUrlInputValue("");
+      } catch {
+        setError("Failed to fetch URL");
+      } finally {
+        setIsLoading(false);
       }
     },
     [urlInputValue, onUrlSubmit]
@@ -33,6 +49,7 @@ export function SplatLoader({ defaultUrl, currentUrl, onUrlSubmit }: SplatLoader
   const handleReset = useCallback(() => {
     onUrlSubmit(defaultUrl);
     setUrlInputValue("");
+    setError(null);
   }, [defaultUrl, onUrlSubmit]);
 
   return (
@@ -52,9 +69,14 @@ export function SplatLoader({ defaultUrl, currentUrl, onUrlSubmit }: SplatLoader
           <p className="text-xs text-muted-foreground">
             Supports .spz, .splat, .ply
           </p>
+          {error && (
+            <p className="text-xs text-destructive">
+              {error}
+            </p>
+          )}
           <div className="flex gap-2">
-            <Button type="submit" size="xs" disabled={!urlInputValue.trim()}>
-              Load
+            <Button type="submit" size="xs" disabled={!urlInputValue.trim() || isLoading}>
+              {isLoading ? "Loading..." : "Load"}
             </Button>
             {currentUrl !== defaultUrl && (
               <Button type="button" variant="outline" size="xs" onClick={handleReset}>
