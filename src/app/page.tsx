@@ -68,15 +68,15 @@ export default function Home() {
       )}
       {/* Editor panels - top right */}
       <div className="absolute top-4 right-4 z-10 w-64 space-y-3">
+        <SplatLoader
+          defaultUrl={DEFAULT_SPLAT_URL}
+          onUrlSubmit={handleUrlSubmit}
+        />
         <RailEditor
           controlPoints={controlPoints}
           selectedPointId={selectedPointId}
           onSelectPoint={setSelectedPointId}
           onDeletePoint={handleDeletePoint}
-        />
-        <SplatLoader
-          defaultUrl={DEFAULT_SPLAT_URL}
-          onUrlSubmit={handleUrlSubmit}
         />
       </div>
       {/* Bottom toolbar */}
