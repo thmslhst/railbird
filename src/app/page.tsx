@@ -7,6 +7,7 @@ import { PlayerView } from "@/components/PlayerView";
 import { RailEditor, type EditorMode } from "@/components/RailEditor";
 import { SplatLoader } from "@/components/SplatLoader";
 import { Toolbar } from "@/components/Toolbar";
+import { ExportButton } from "@/components/ExportButton";
 import type { ControlPoint, CameraRailSystem } from "@/systems/camera-rail";
 import type { SceneSystem } from "@/systems/scene";
 import { storageGet, storageSet } from "@/lib/storage";
@@ -106,6 +107,12 @@ export default function Home() {
       </div>
       {/* Bottom toolbar */}
       <Toolbar mode={editorMode} onModeChange={setEditorMode} />
+      {/* Export button - bottom right */}
+      {railSystem && (
+        <div className="absolute bottom-4 right-4 z-10">
+          <ExportButton rail={railSystem} splatUrl={splatUrl} />
+        </div>
+      )}
     </main>
   );
 }
