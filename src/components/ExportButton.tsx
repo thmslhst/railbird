@@ -1,6 +1,5 @@
 "use client";
 
-import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createExport, downloadExport } from "@/lib/export";
 import type { CameraRailSystem } from "@/systems/camera-rail";
@@ -26,14 +25,11 @@ export function ExportButton({ rail, splatUrl }: ExportButtonProps) {
 
   return (
     <Button
-      variant="outline"
-      size="sm"
       onClick={handleExport}
       disabled={!hasPoints}
       className="gap-2"
     >
-      <Download className="size-4" />
-      Export Rail
+      Export
     </Button>
   );
 }
