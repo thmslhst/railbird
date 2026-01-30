@@ -16,7 +16,6 @@ For now, Splato intentionally focuses on:
 
 - **Next.js** (App Router)
 - **TypeScript**
-- **Vite** (Bundler)
 - **Three.js**
 - **Spark.js** (Gaussian Splatting)
 - **Tailwind CSS**
