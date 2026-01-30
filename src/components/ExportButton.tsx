@@ -17,7 +17,10 @@ export function ExportButton({ rail, splatUrl }: ExportButtonProps) {
       return;
     }
 
-    const exportData = createExport({ splatUrl, controlPoints });
+    // Resolve to absolute URL so the export is usable anywhere
+    const absoluteUrl = new URL(splatUrl, window.location.origin).href;
+
+    const exportData = createExport({ splatUrl: absoluteUrl, controlPoints });
     downloadExport(exportData);
   };
 
