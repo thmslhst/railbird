@@ -19,6 +19,7 @@ import {
   type CameraRailSystem,
   type ControlPoint,
 } from "@/systems/camera-rail";
+import { storageGet, storageSet } from "@/lib/storage";
 import {
   createControlPointHelperSystem,
   type ControlPointHelperSystem,
@@ -106,6 +107,9 @@ export function EditorView({
 
     // Notify parent of changes
     onPointsChange([...points]);
+
+    // Persist to storage
+    storageSet("splato:cameraRail", rail.toJSON());
   }, [selectedPointId, onPointsChange]);
 
   // Initialize scene and viewport once
@@ -132,9 +136,23 @@ export function EditorView({
     const rail = externalRailSystem ?? createCameraRailSystem();
     railRef.current = rail;
 
+    // Load stored rail data if we created the rail system
+    if (!externalRailSystem) {
+      const storedRail = storageGet("splato:cameraRail");
+      if (storedRail && storedRail.length > 0) {
+        rail.fromJSON(storedRail);
+      }
+    }
+
     // Create control point helper system
     const helper = createControlPointHelperSystem();
     helperRef.current = helper;
+
+    // Sync meshes to show loaded control points
+    // (deferred to allow helper to be set first)
+    requestAnimationFrame(() => {
+      syncPointMeshes();
+    });
 
     // Notify parent of systems (for sharing with PlayerView)
     onSystemsReady?.(sceneSystem, rail);
