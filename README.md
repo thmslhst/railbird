@@ -1,10 +1,8 @@
 # Splato
 
-**Scroll-driven camera rail editor for your Gaussian splat scenes.**
+Splato is a creative prototyping tool for designing scroll-driven camera animations through Gaussian Splatting scenes. Build camera rails, preview scroll-bound playback, and export configurations for use in your own projects.
 
 ![Splato Screenshot](public/splato-screenshot.png)
-
-Splato is a creative prototyping tool for designing scroll-driven camera animations through Gaussian Splatting scenes. Build camera rails, preview scroll-bound playback, and export configurations for use in your own projects.
 
 ---
 
