@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { EditorView } from "@/components/EditorView";
 import { PlayerView } from "@/components/PlayerView";
@@ -14,38 +14,54 @@ import type { SceneSystem } from "@/systems/scene";
 import { storageGet, storageSet } from "@/lib/storage";
 
 const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
+const STORAGE_KEY = "splato:splatUrl";
+
+// Custom event for same-tab storage updates
+const STORAGE_UPDATE_EVENT = "splato-storage-update";
+
+// Subscribe to storage changes (for useSyncExternalStore)
+function subscribeToStorage(callback: () => void) {
+  window.addEventListener("storage", callback);
+  window.addEventListener(STORAGE_UPDATE_EVENT, callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener(STORAGE_UPDATE_EVENT, callback);
+  };
+}
+
+// Get current snapshot from storage
+function getStorageSnapshot() {
+  return storageGet(STORAGE_KEY) || DEFAULT_SPLAT_URL;
+}
+
+// Server snapshot always returns default
+function getServerSnapshot() {
+  return DEFAULT_SPLAT_URL;
+}
 
 export default function Home() {
-  // Initialize with default, then load from storage in useEffect
-  const [splatUrl, setSplatUrl] = useState(DEFAULT_SPLAT_URL);
-  const [isHydrated, setIsHydrated] = useState(false);
+  // Read stored URL with proper SSR handling (single source of truth)
+  const splatUrl = useSyncExternalStore(
+    subscribeToStorage,
+    getStorageSnapshot,
+    getServerSnapshot
+  );
+
   const [editorMode, setEditorMode] = useState<EditorMode>("select");
   const [controlPoints, setControlPoints] = useState<ControlPoint[]>([]);
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
   // Rail system stored in state since we render based on its presence
   const [railSystem, setRailSystem] = useState<CameraRailSystem | null>(null);
 
-  // Load splat URL from storage on mount
-  useEffect(() => {
-    const stored = storageGet("splato:splatUrl");
-    if (stored) {
-      setSplatUrl(stored);
-    }
-    setIsHydrated(true);
-  }, []);
-
-  // Save splat URL when it changes (skip default URL and initial hydration)
-  useEffect(() => {
-    if (!isHydrated) return;
-    if (splatUrl === DEFAULT_SPLAT_URL) {
-      // Don't persist the default URL
-      return;
-    }
-    storageSet("splato:splatUrl", splatUrl);
-  }, [splatUrl, isHydrated]);
-
   const handleUrlSubmit = useCallback((url: string) => {
-    setSplatUrl(url);
+    if (url !== DEFAULT_SPLAT_URL) {
+      storageSet(STORAGE_KEY, url);
+    } else {
+      // Clear storage when resetting to default
+      storageSet(STORAGE_KEY, "");
+    }
+    // Trigger re-render for same-tab updates
+    window.dispatchEvent(new Event(STORAGE_UPDATE_EVENT));
   }, []);
 
   const handleSystemsReady = useCallback((_scene: SceneSystem, rail: CameraRailSystem) => {
