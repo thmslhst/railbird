@@ -48,7 +48,7 @@ export function Toolbar({ mode, onModeChange }: ToolbarProps) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
         <div className="flex gap-1 bg-background/90 backdrop-blur-sm rounded-lg p-1 shadow-lg border">
           <Tooltip>
             <TooltipTrigger asChild>
