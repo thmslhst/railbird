@@ -8,6 +8,7 @@ import { RailEditor, type EditorMode } from "@/components/RailEditor";
 import { SplatLoader } from "@/components/SplatLoader";
 import { Toolbar } from "@/components/Toolbar";
 import { ExportButton } from "@/components/ExportButton";
+import { InfoModal } from "@/components/InfoModal";
 import type { ControlPoint, CameraRailSystem } from "@/systems/camera-rail";
 import type { SceneSystem } from "@/systems/scene";
 import { storageGet, storageSet } from "@/lib/storage";
@@ -107,9 +108,10 @@ export default function Home() {
       </div>
       {/* Bottom toolbar */}
       <Toolbar mode={editorMode} onModeChange={setEditorMode} />
-      {/* Export button - bottom right */}
+      {/* Export button and info - bottom right */}
       {railSystem && (
-        <div className="absolute bottom-4 right-4 z-10">
+        <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+          <InfoModal />
           <ExportButton rail={railSystem} splatUrl={splatUrl} />
         </div>
       )}
