@@ -47,7 +47,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ### 1. Load a Splat
 
-Enter a URL to a Gaussian splat file (`.spz`, `.splat`, or `.ply`) in the loader panel. A sample butterfly splat is included at `/butterfly.spz`.
+Enter a URL to a Gaussian Splat file (`.spz`, `.splat`, or `.ply`) in the loader panel.
 
 ### 2. Build Your Camera Rail
 
