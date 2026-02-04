@@ -13,7 +13,7 @@ import type { ControlPoint, CameraRailSystem } from "@/systems/camera-rail";
 import type { SceneSystem } from "@/systems/scene";
 import { storageGet, storageSet } from "@/lib/storage";
 
-const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
+const DEFAULT_SPLAT_URL = "/default.spz";
 const STORAGE_KEY = "railbird:splatUrl";
 
 // Custom event for same-tab storage updates
