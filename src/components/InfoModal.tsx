@@ -44,7 +44,14 @@ export function InfoModal() {
             <p className="text-muted-foreground">
               Created and developed by{" "}
               <span className="font-medium text-foreground">
-                <a href="https://www.thmslhst.com" target="_blank">Thomas Lhoest</a>
+                <a 
+                  href="https://www.thmslhst.com" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="hover:underline"
+                >
+                  Thomas Lhoest
+                </a>
               </span>
             </p>
             <a
