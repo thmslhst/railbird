@@ -1,5 +1,5 @@
 /**
- * Core rendering system for Splato.
+ * Core rendering system for Railbird.
  * Manages WebGL renderer, animation loop, and resize handling.
  * Decoupled from React - operates imperatively.
  */

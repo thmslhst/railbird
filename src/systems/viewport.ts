@@ -1,5 +1,5 @@
 /**
- * Base viewport system for Splato.
+ * Base viewport system for Railbird.
  * A viewport manages its own renderer and camera, but renders a shared scene.
  * Multiple viewports can render the same scene simultaneously.
  */

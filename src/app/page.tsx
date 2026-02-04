@@ -14,10 +14,10 @@ import type { SceneSystem } from "@/systems/scene";
 import { storageGet, storageSet } from "@/lib/storage";
 
 const DEFAULT_SPLAT_URL = "/burger-from-amboy.spz";
-const STORAGE_KEY = "splato:splatUrl";
+const STORAGE_KEY = "railbird:splatUrl";
 
 // Custom event for same-tab storage updates
-const STORAGE_UPDATE_EVENT = "splato-storage-update";
+const STORAGE_UPDATE_EVENT = "railbird-storage-update";
 
 // Subscribe to storage changes (for useSyncExternalStore)
 function subscribeToStorage(callback: () => void) {
@@ -90,8 +90,8 @@ export default function Home() {
       />
       {/* Logo - top left */}
       <Image
-        src="/splato_.svg"
-        alt="Splato"
+        src="/railbird.svg"
+        alt="Railbird"
         width={94}
         height={36}
         className="absolute top-4 left-4 z-10 h-8 w-auto"

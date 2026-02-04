@@ -1,13 +1,13 @@
 /**
- * Export utilities for Splato.
+ * Export utilities for Railbird.
  *
  * The export format captures the "creative intent" - the camera rail,
- * splat reference, and future extensions (camera settings, shaders, lighting).
+ * scene reference, and future extensions (camera settings, shaders, lighting).
  *
  * Design philosophy (from ARCHITECTURE.md):
  * - Export data, not implementation
  * - JSON configs remain valid across library upgrades
- * - Consumers can use @splato/player or roll their own
+ * - Consumers can use @railbird/player or roll their own
  *
  * The mental model: Figma → CSS, not Figma → static image.
  * Export the creative intent, let consumers handle rendering.
@@ -16,12 +16,12 @@
 import type { ControlPointData } from "@/systems/camera-rail";
 
 /**
- * The Splato export format.
+ * The Railbird export format.
  * Designed for easy integration into scroll-driven websites.
  */
-export interface SplatoExport {
+export interface RailbirdExport {
   version: string;
-  splat: {
+  scene: {
     url: string;
     position?: [number, number, number];
     rotation?: [number, number, number, number];
@@ -39,7 +39,7 @@ export interface SplatoExport {
 export const EXPORT_VERSION = "1.0";
 
 export interface CreateExportOptions {
-  splatUrl: string;
+  sceneUrl: string;
   controlPoints: ControlPointData[];
   interpolation?: "linear" | "catmull-rom";
 }
@@ -47,13 +47,13 @@ export interface CreateExportOptions {
 /**
  * Create the export data structure from current state.
  */
-export function createExport(options: CreateExportOptions): SplatoExport {
-  const { splatUrl, controlPoints, interpolation = "linear" } = options;
+export function createExport(options: CreateExportOptions): RailbirdExport {
+  const { sceneUrl, controlPoints, interpolation = "linear" } = options;
 
   return {
     version: EXPORT_VERSION,
-    splat: {
-      url: splatUrl,
+    scene: {
+      url: sceneUrl,
     },
     rail: {
       controlPoints,
@@ -66,8 +66,8 @@ export function createExport(options: CreateExportOptions): SplatoExport {
  * Download the export as a JSON file.
  */
 export function downloadExport(
-  exportData: SplatoExport,
-  filename = "splato-rail.json"
+  exportData: RailbirdExport,
+  filename = "railbird-rail.json"
 ): void {
   const json = JSON.stringify(exportData, null, 2);
   const blob = new Blob([json], { type: "application/json" });

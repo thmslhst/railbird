@@ -1,6 +1,6 @@
-# Splato — Architecture
+# Railbird — Architecture
 
-This document describes the technical architecture of Splato's rendering and viewport systems.
+This document describes the technical architecture of Railbird's rendering and viewport systems.
 
 For project context, coding guidelines, and design philosophy, see [CLAUDE.md](./CLAUDE.md).
 
@@ -8,12 +8,14 @@ For project context, coding guidelines, and design philosophy, see [CLAUDE.md](.
 
 ## Overview
 
-Splato is a camera rail editor for Gaussian Splatting scenes. The architecture supports two distinct views:
+Railbird is a camera rail editor for any Three.js scene. The architecture supports two distinct views:
 
 1. **Editor View** — Free camera navigation with OrbitControls, grid helper, for building and editing camera rails
 2. **Player View** — Rail-driven camera controlled by a normalized parameter `t ∈ [0, 1]`, for previewing the final result
 
-Each view has its **own scene and splat instance** to avoid WebGL state conflicts. They share the **camera rail system** for synchronized positioning.
+Each view has its **own scene and content instance** to avoid WebGL state conflicts. They share the **camera rail system** for synchronized positioning.
+
+**The camera rail is the core product** — it works with any Three.js content (Gaussian Splats, glTF models, OBJ meshes, etc.).
 
 ---
 
@@ -30,7 +32,7 @@ src/
 │   ├── EditorView.tsx      # React component for editor viewport
 │   ├── PlayerView.tsx      # React component for player preview
 │   ├── RailEditor.tsx      # Control points list panel
-│   ├── SplatLoader.tsx     # URL input for loading splats
+│   ├── SplatLoader.tsx     # URL input for loading content
 │   ├── Toolbar.tsx         # Mode selection toolbar
 │   └── ui/                 # shadcn/ui components
 │       ├── button.tsx
@@ -55,7 +57,7 @@ src/
 
 ### Scene System (`src/systems/scene.ts`)
 
-The scene system owns a `THREE.Scene` instance. Each view creates its own scene to avoid WebGL state conflicts with SplatMesh.
+The scene system owns a `THREE.Scene` instance. Each view creates its own scene to avoid WebGL state conflicts with content that has renderer-specific state.
 
 ```typescript
 interface SceneSystem {
@@ -66,7 +68,7 @@ interface SceneSystem {
 }
 ```
 
-**Key principle**: Editor and Player have **isolated scenes** with separate splat instances. This prevents renderer-specific WebGL state from bleeding between viewports.
+**Key principle**: Editor and Player have **isolated scenes** with separate content instances. This prevents renderer-specific WebGL state from bleeding between viewports.
 
 ---
 
@@ -170,7 +172,7 @@ interface CameraRailSystem {
 }
 ```
 
-**Key principle**: The rail maps `t → camera pose`. It knows nothing about scroll, UI, or React. This enables:
+**Key principle**: The rail maps `t → camera pose`. It knows nothing about scroll, UI, React, or scene content. This enables:
 
 - Scroll-driven playback (scroll position → t → camera pose)
 - UI scrubbing (slider value → t → camera pose)
@@ -187,7 +189,7 @@ interface CameraRailSystem {
 │                          React Layer                                 │
 │                                                                      │
 │  ┌──────────────┐                                                    │
-│  │   page.tsx   │ ─── manages state: splatUrl, editorMode, rail     │
+│  │   page.tsx   │ ─── manages state: contentUrl, editorMode, rail   │
 │  └──────┬───────┘                                                    │
 │         │                                                            │
 │         ├────────────────────┬───────────────────────┐               │
@@ -207,7 +209,7 @@ interface CameraRailSystem {
 │                                                                      │
 │  ┌──────────────────┐              ┌──────────────────┐             │
 │  │  Editor Scene    │              │  Player Scene    │             │
-│  │  • SplatMesh     │              │  • SplatMesh     │             │
+│  │  • 3D Content    │              │  • 3D Content    │             │
 │  │  • GridHelper    │              │  (own instance)  │             │
 │  │  • ControlPoint  │              │                  │             │
 │  │    helpers       │              │                  │             │
@@ -229,7 +231,7 @@ interface CameraRailSystem {
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key insight**: The camera rail is the only shared system between Editor and Player. Each has its own scene, splat, and renderer to avoid WebGL conflicts.
+**Key insight**: The camera rail is the only shared system between Editor and Player. Each has its own scene, content, and renderer to avoid WebGL conflicts.
 
 ---
 
@@ -241,7 +243,7 @@ React is used for **lifecycle orchestration only**. Three.js objects are stored 
 // EditorView.tsx pattern
 const sceneRef = useRef<SceneSystem | null>(null);
 const viewportRef = useRef<EditorViewport | null>(null);
-const splatRef = useRef<SplatMesh | null>(null);
+const contentRef = useRef<THREE.Object3D | null>(null);
 
 useEffect(() => {
   // Initialize systems once
@@ -266,20 +268,20 @@ PlayerView is a self-contained preview component:
 - **Card UI** at bottom-left with aspect-ratio viewport
 - **Scroll-bound animation**: scroll within the card maps to `t ∈ [0, 1]`
 - **Fullscreen mode**: expands to fill screen, scroll controls playback
-- **Own scene + splat**: isolated from editor to prevent WebGL conflicts
+- **Own scene + content**: isolated from editor to prevent WebGL conflicts
 
 ```typescript
 interface PlayerViewProps {
-  splatUrl: string;           // Loads own splat instance
+  splatUrl: string;           // Loads own content instance
   rail: CameraRailSystem;     // Shared rail for camera positioning
 }
 ```
 
 ---
 
-## Gaussian Splatting Integration
+## Content Integration
 
-Splats are loaded via Spark.js as first-class Three.js objects:
+Content is loaded as first-class Three.js objects. Currently supports Gaussian Splats via Spark.js:
 
 ```typescript
 import { SplatMesh } from "@sparkjsdev/spark";
@@ -290,47 +292,49 @@ splat.quaternion.set(1, 0, 0, 0);
 sceneSystem.add(splat);
 ```
 
-Spark.js is an **implementation detail**. The architecture does not depend on it — splats behave like any other `THREE.Object3D`.
+**Key principle**: Content loaders (Spark.js, GLTFLoader, etc.) are **implementation details**. The architecture does not depend on any specific format — all content behaves like standard `THREE.Object3D`.
 
-**Important**: SplatMesh has renderer-specific WebGL state. Multiple renderers cannot share the same SplatMesh instance. Each viewport that needs to display a splat must load its own instance.
+**Important**: Some content types have renderer-specific WebGL state. Multiple renderers cannot share the same instance. Each viewport that needs to display content must load its own instance.
 
-Supported formats: `.spz`, `.splat`, `.ply`
+Supported formats: `.spz`, `.splat`, `.ply` (Gaussian Splats)
+
+Future: `.glb`, `.gltf`, `.obj`, and other Three.js-compatible formats.
 
 ---
 
 ## Export Strategy
 
-Splato's export is designed for **scroll-driven storytelling on websites** (landing pages, portfolios, etc.).
+Railbird's export is designed for **scroll-driven storytelling on websites** (landing pages, portfolios, etc.).
 
 ### The Core Question: JSON Config vs. Scene Bundle?
 
-The PlayerView forms what looks like a complete, exportable scene — splat + camera rail + scroll binding. Why not bundle and export the whole thing?
+The PlayerView forms what looks like a complete, exportable scene — content + camera rail + scroll binding. Why not bundle and export the whole thing?
 
 **The scene isn't actually portable.**
 
-What looks like "the scene" is really: Spark.js + Three.js + specific WebGL state + render loop timing. Export that as a bundle and consumers are locked to exact dependency versions. When Spark.js ships a breaking change, exported bundles break.
+What looks like "the scene" is really: Three.js + loaders + specific WebGL state + render loop timing. Export that as a bundle and consumers are locked to exact dependency versions. When libraries ship breaking changes, exported bundles break.
 
 **Shaders and lighting make bundling worse, not better.**
 
 Future features like GLSL shaders and lighting *strengthen* the case for JSON. A shader is uniforms + source code. Lighting is parameters. These are **data**, not implementations. Export them as config, and the consumer's player interprets them — maybe they use a different shader compiler, maybe they're on WebGPU.
 
-**The real product isn't the scene — it's the camera path.**
+**The real product isn't the scene — it's the camera rail.**
 
-What Splato creates that's *actually valuable* is the camera rail. The splat already exists elsewhere (hosted asset). The consumer already has Three.js. What they *don't* have is a good way to author scroll-driven camera animation. That's the export.
+What Railbird creates that's *actually valuable* is the camera rail. The content already exists elsewhere (hosted asset). The consumer already has Three.js. What they *don't* have is a good way to author scroll-driven camera animation. That's the export.
 
 **The right mental model: Figma → CSS, not Figma → static image.**
 
-Figma doesn't export a "rendered website." It exports design tokens, specs, and code snippets that developers integrate. Splato should do the same: export the *creative intent* (rail, timing, splat reference), let the consumer handle rendering.
+Figma doesn't export a "rendered website." It exports design tokens, specs, and code snippets that developers integrate. Railbird should do the same: export the *creative intent* (rail, timing, content reference), let the consumer handle rendering.
 
 ---
 
 ### Export Format: JSON Configuration
 
 ```typescript
-interface SplatoExport {
+interface RailbirdExport {
   version: string;
-  splat: {
-    url: string;              // Splat asset URL (hosted separately)
+  scene: {
+    url: string;              // Content asset URL (hosted separately)
     position?: [number, number, number];
     rotation?: [number, number, number, number];
   };
@@ -347,13 +351,13 @@ interface SplatoExport {
 
 ### Why JSON over Scene Bundle?
 
-1. **Separation of data vs. implementation**: The rail is pure data. The rendering implementation (Three.js version, Spark.js version, custom shaders) is the consumer's choice.
+1. **Separation of data vs. implementation**: The rail is pure data. The rendering implementation (Three.js version, loaders, custom shaders) is the consumer's choice.
 
 2. **Future-proofing**: Adding shaders, lighting, post-processing — these are config options, not bundled code. The consumer's player can interpret them.
 
-3. **Size**: Splat files can be 10-100MB+. They should be hosted as assets, not bundled in exports.
+3. **Size**: Content files can be 10-100MB+. They should be hosted as assets, not bundled in exports.
 
-4. **Flexibility**: Consumers can customize playback behavior, add their own effects, or use different splat libraries.
+4. **Flexibility**: Consumers can customize playback behavior, add their own effects, or use different content libraries.
 
 5. **Longevity**: JSON configs remain valid across library upgrades. Bundled WebGL code doesn't.
 
@@ -362,28 +366,28 @@ interface SplatoExport {
 ### What Gets Shipped
 
 ```text
-Export: splato-config.json (~5KB)
+Export: railbird-config.json (~5KB)
 ├── rail: control points, interpolation mode
-├── splat: { url: "https://cdn.../model.spz", transform: {...} }
+├── scene: { url: "https://cdn.../model.spz", transform: {...} }
 └── meta: { version, createdAt }
 
-+ @splato/player (tree-shakeable, ~30KB gzipped)
-    └── drop-in scroll-driven splat player
++ @railbird/player (tree-shakeable, ~30KB gzipped)
+    └── drop-in scroll-driven player
 ```
 
-The consumer either uses the player package, or reads the JSON and rolls their own. Either way, they're not locked to Splato's implementation choices.
+The consumer either uses the player package, or reads the JSON and rolls their own. Either way, they're not locked to Railbird's implementation choices.
 
 ---
 
 ### Embeddable Player (Future)
 
-A lightweight `@splato/player` package that consumes the JSON config:
+A lightweight `@railbird/player` package that consumes the JSON config:
 
 ```html
 <script type="module">
-  import { SplatoPlayer } from '@splato/player';
+  import { RailbirdPlayer } from '@railbird/player';
 
-  const player = new SplatoPlayer({
+  const player = new RailbirdPlayer({
     container: document.getElementById('hero'),
     config: '/path/to/export.json',
     scrollContainer: window,  // or a specific element
@@ -391,7 +395,7 @@ A lightweight `@splato/player` package that consumes the JSON config:
 </script>
 ```
 
-This keeps Splato (the editor) separate from the runtime (the player), enabling independent evolution of both.
+This keeps Railbird (the editor) separate from the runtime (the player), enabling independent evolution of both.
 
 ---
 
@@ -410,7 +414,11 @@ This keeps Splato (the editor) separate from the runtime (the player), enabling 
    - Keyframe easing controls
    - Path preview visualization
 
-4. **Scene Enhancements**
-   - Multiple splats
+4. **Multi-Format Support**
+   - glTF/GLB models
+   - OBJ meshes
+   - Multiple objects per scene
+
+5. **Scene Enhancements**
    - Basic lighting controls
    - GLSL shader presets

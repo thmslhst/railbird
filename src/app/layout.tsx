@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Splato",
-  description: "Prototyping tool for Gaussian Splatting and scroll-driven camera rails",
+  title: "Railbird",
+  description: "Camera rail editor for scroll-driven animations through any Three.js scene",
 };
 
 export default function RootLayout({

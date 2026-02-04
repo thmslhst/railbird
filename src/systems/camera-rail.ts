@@ -1,5 +1,5 @@
 /**
- * Camera Rail system for Splato.
+ * Camera Rail system for Railbird.
  * Manages control points that define the camera path.
  * The rail maps t ∈ [0, 1] → camera pose (position + rotation).
  */

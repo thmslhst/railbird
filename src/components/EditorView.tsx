@@ -109,7 +109,7 @@ export function EditorView({
     onPointsChange([...points]);
 
     // Persist to storage
-    storageSet("splato:cameraRail", rail.toJSON());
+    storageSet("railbird:cameraRail", rail.toJSON());
   }, [selectedPointId, onPointsChange]);
 
   // Initialize scene and viewport once
@@ -138,7 +138,7 @@ export function EditorView({
 
     // Load stored rail data if we created the rail system
     if (!externalRailSystem) {
-      const storedRail = storageGet("splato:cameraRail");
+      const storedRail = storageGet("railbird:cameraRail");
       if (storedRail && storedRail.length > 0) {
         rail.fromJSON(storedRail);
       }

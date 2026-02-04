@@ -20,7 +20,7 @@ export function ExportButton({ rail, splatUrl }: ExportButtonProps) {
     // Resolve to absolute URL so the export is usable anywhere
     const absoluteUrl = new URL(splatUrl, window.location.origin).href;
 
-    const exportData = createExport({ splatUrl: absoluteUrl, controlPoints });
+    const exportData = createExport({ sceneUrl: absoluteUrl, controlPoints });
     downloadExport(exportData);
   };
 

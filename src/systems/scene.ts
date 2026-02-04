@@ -1,7 +1,7 @@
 /**
- * Scene system for Splato.
+ * Scene system for Railbird.
  * Manages the shared Three.js scene that can be rendered by multiple viewports.
- * This is the single source of truth for all scene objects (splats, meshes, helpers).
+ * This is the single source of truth for all scene objects (content, meshes, helpers).
  */
 
 import * as THREE from "three";

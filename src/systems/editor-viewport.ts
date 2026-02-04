@@ -1,5 +1,5 @@
 /**
- * Editor viewport for Splato.
+ * Editor viewport for Railbird.
  * Extends the base viewport with OrbitControls and a grid helper.
  * Used for the editor view where users can freely navigate the scene.
  */

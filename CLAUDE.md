@@ -1,11 +1,11 @@
-# Splato — Project Context & Coding Guidelines
+# Railbird — Project Context & Coding Guidelines
 
-You are working on **Splato**, a focused **creative prototyping tool**.
+You are working on **Railbird**, a focused **creative prototyping tool for camera rails**.
 
-Splato is **not a throwaway demo**.  
-It is a small but solid foundation for experimenting with **Gaussian Splatting**, **Three.js scenes**, and **scroll-driven camera rails**.
+Railbird is **not a throwaway demo**.
+It is a small but solid foundation for designing **scroll-driven camera animations** through any Three.js scene — whether that's Gaussian Splats, glTF models, OBJ meshes, or custom geometry.
 
-For now, Splato intentionally focuses on:
+For now, Railbird intentionally focuses on:
 - **a single camera**
 - **a single scrollable camera rail**
 - no multi-camera system
@@ -17,18 +17,27 @@ For now, Splato intentionally focuses on:
 - **Next.js** (App Router)
 - **TypeScript**
 - **Three.js**
-- **Spark.js** (Gaussian Splatting)
+- **Spark.js** (Gaussian Splatting support)
 - **Tailwind CSS**
 - **shadcn/ui**
 
 ---
 
-## Supported File Formats
+## Supported Asset Formats
 
-Splato supports Gaussian Splat assets in the following formats:
-- `.spz`
+Railbird is **model-agnostic**. The camera rail system works with any Three.js-compatible content:
+
+**Gaussian Splats:**
+
+- `.spz` (Spark compressed)
 - `.splat`
 - `.ply`
+
+**3D Models (future):**
+
+- `.glb` / `.gltf`
+- `.obj`
+- `.fbx`
 
 File loading logic should remain format-agnostic at the system level.
 
@@ -36,13 +45,16 @@ File loading logic should remain format-agnostic at the system level.
 
 ## Core Intent
 
-Splato is built around **camera control and scene composition**, not around a pre-packaged viewer.
+Railbird is built around **camera rail creation and scene composition**. The rail system is the product — not any specific 3D format.
 
-Gaussian splats must be treated as **first-class Three.js objects**, not as a renderer or viewer that owns the scene.
+**The camera rail is the first-class citizen.**
+
+Any 3D content (splats, meshes, models) must be treated as **first-class Three.js objects** that the rail system animates through, not as a renderer or viewer that owns the scene.
 
 The architecture must remain flexible enough to evolve into:
 - a more advanced camera rail editor
 - timeline-based storytelling
+- multi-format scene composition
 - richer interaction tooling
 
 …but without prematurely supporting multi-camera setups.
@@ -51,15 +63,15 @@ The architecture must remain flexible enough to evolve into:
 
 ## Key Architectural Principles
 
-### Gaussian Splatting
+### Scene Content
 
-- Gaussian splats must exist at the **mesh / Object3D level**.
-- Spark.js is an **implementation detail**, not a core architectural pillar.
+- All 3D content must exist at the **mesh / Object3D level**.
+- Format-specific loaders (Spark.js, GLTFLoader, etc.) are **implementation details**, not core architectural pillars.
 - Avoid viewer-style abstractions that control:
   - the render loop
   - the camera
   - the scene
-- Gaussian splats must behave like any other Three.js object:
+- All content must behave like standard Three.js objects:
   - positionable
   - rotatable
   - animatable
@@ -69,7 +81,7 @@ The architecture must remain flexible enough to evolve into:
 
 ### Camera System
 
-- Splato uses **a single camera**.
+- Railbird uses **a single camera**.
 - The camera is a **first-class system**, not a side effect of scroll or UI.
 
 The camera must never depend directly on:
@@ -95,10 +107,17 @@ Even though there is only one camera, its control logic must be **decoupled and 
 - It is responsible for mapping `t → camera pose`.
 - It should be implemented as a pure, deterministic system.
 
+**The rail is the core product.** It must be:
+
+- independent of scene content
+- serializable to JSON
+- importable into any Three.js project
+
 The rail must not know:
 - about scroll
 - about UI
 - about React
+- about what content is in the scene
 
 ---
 
@@ -106,16 +125,16 @@ The rail must not know:
 
 Keep systems clearly separated:
 
-- **Scene system**  
-  (Three.js scene, splats, meshes, helpers)
+- **Scene system**
+  (Three.js scene, content loading, meshes, helpers)
 
-- **Camera system**  
+- **Camera system**
   (camera rig, camera rail, interpolation)
 
-- **Rendering system**  
+- **Rendering system**
   (renderer, animation loop, resize handling)
 
-- **UI / Editor system**  
+- **UI / Editor system**
   (controls, panels, overlays — Tailwind + shadcn)
 
 Avoid monolithic abstractions that blur these responsibilities.
@@ -155,10 +174,11 @@ UI components must:
   - the camera
   - the scene
 - ❌ Multi-camera assumptions or abstractions
-- ❌ Tight coupling between Spark.js and React components
+- ❌ Tight coupling between format-specific loaders and React components
 - ❌ Clever React abstractions that obscure Three.js state
 - ❌ Camera logic directly tied to scroll or UI events
 - ❌ Over-engineering before editor features exist
+- ❌ Treating any 3D format as more important than the rail system
 
 ---
 
@@ -174,7 +194,7 @@ UI components must:
 
 ## Design Philosophy
 
-Splato should feel like:
+Railbird should feel like:
 - a **creative tool**
 - a **focused experiment**
 - a **camera-first playground**
@@ -183,6 +203,7 @@ When making design decisions:
 - Think in terms of **systems**, not components.
 - Prefer patterns that scale toward an **editor**, even if unused initially.
 - If a choice makes future camera rail editing harder, choose another approach.
+- The rail system should work with any scene content — don't over-couple to any format.
 
 ---
 
@@ -192,4 +213,4 @@ When making design decisions:
 - Default to explicit, boring solutions over clever ones.
 - Optimize for **hackability** and **iteration speed**.
 
-Splato is meant to be explored, bent, and extended — starting with a single camera and a single scrollable rail.
+Railbird is meant to be explored, bent, and extended — starting with a single camera and a single scrollable rail that works with any Three.js content.

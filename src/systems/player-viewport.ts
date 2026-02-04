@@ -1,5 +1,5 @@
 /**
- * Player viewport for Splato.
+ * Player viewport for Railbird.
  * A minimal viewport for previewing rail-driven camera animation.
  * No user controls - camera pose is set externally via setProgress().
  */

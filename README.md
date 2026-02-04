@@ -1,8 +1,8 @@
-# Splato
+# Railbird
 
-Splato is a creative prototyping tool for designing scroll-driven camera animations through Gaussian Splatting scenes. Build camera rails, preview scroll-bound playback, and export configurations for use in your own projects.
+Railbird is a creative prototyping tool for designing scroll-driven camera animations through any Three.js scene. Build camera rails, preview scroll-bound playback, and export configurations for use in your own projects.
 
-![Splato Screenshot](public/splato-screenshot.png)
+![Railbird Screenshot](public/railbird-screenshot.png)
 
 ---
 
@@ -12,7 +12,7 @@ Splato is a creative prototyping tool for designing scroll-driven camera animati
 - **Dual Viewport** — Edit in free-camera mode, preview in scroll-driven player mode
 - **Scroll-Driven Playback** — Camera position mapped to scroll progress (`t ∈ [0, 1]`)
 - **Export to JSON** — Portable configuration for integration into any Three.js project
-- **Multiple Splat Formats** — Supports `.spz`, `.splat`, and `.ply` files
+- **Model-Agnostic** — Works with Gaussian Splats (`.spz`, `.splat`, `.ply`), and any Three.js content
 
 ---
 
@@ -26,8 +26,8 @@ Splato is a creative prototyping tool for designing scroll-driven camera animati
 ### Installation
 
 ```bash
-git clone https://github.com/your-username/splato.git
-cd splato
+git clone https://github.com/thmslhst/railbird.git
+cd railbird
 npm install
 ```
 
@@ -43,9 +43,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## How to Use
 
-### 1. Load a Splat
+### 1. Load Your Scene
 
-Enter a URL to a Gaussian Splat file (`.spz`, `.splat`, or `.ply`) in the loader panel.
+Enter a URL to your 3D content. Currently supports Gaussian Splat files (`.spz`, `.splat`, or `.ply`).
 
 ### 2. Build Your Camera Rail
 
@@ -63,7 +63,7 @@ Switch to **Player Mode** to see the scroll-driven preview. Scroll within the pl
 
 ### 4. Export
 
-Click **Export** to download a JSON configuration file containing your camera rail and splat reference. Use this with your own Three.js setup or a future `@splato/player` package.
+Click **Export** to download a JSON configuration file containing your camera rail and scene reference. Use this with your own Three.js setup or a future `@railbird/player` package.
 
 ---
 
@@ -82,7 +82,7 @@ Click **Export** to download a JSON configuration file containing your camera ra
 
 ## Architecture
 
-Splato separates concerns into distinct systems:
+Railbird separates concerns into distinct systems:
 
 ```text
 src/
@@ -104,7 +104,8 @@ src/
 
 - Three.js objects live in refs, not React state
 - Camera rail is a pure function: `t → camera pose`
-- Each viewport has its own scene + splat instance (WebGL isolation)
+- Each viewport has its own scene + content instance (WebGL isolation)
+- Rail system is content-agnostic — works with any Three.js objects
 
 See [architecture.md](./architecture.md) for detailed technical documentation.
 
@@ -112,12 +113,12 @@ See [architecture.md](./architecture.md) for detailed technical documentation.
 
 ## Export Format
 
-Splato exports a portable JSON configuration:
+Railbird exports a portable JSON configuration:
 
 ```json
 {
   "version": "1.0",
-  "splat": {
+  "scene": {
     "url": "https://example.com/scene.spz"
   },
   "rail": {
@@ -136,7 +137,7 @@ This separates your creative work (the camera path) from the rendering implement
 
 ---
 
-## Supported Splat Formats
+## Supported Formats
 
 | Format | Extension |
 | ------ | --------- |
@@ -144,14 +145,17 @@ This separates your creative work (the camera path) from the rendering implement
 | Standard Splat | `.splat` |
 | Point Cloud | `.ply` |
 
+Future support planned for `.glb`, `.gltf`, `.obj`, and other Three.js-compatible formats.
+
 ---
 
 ## Roadmap
 
 - [ ] Catmull-Rom spline interpolation for smoother paths
 - [ ] Timeline scrubber with easing controls
-- [ ] `@splato/player` embeddable package
-- [ ] Multiple splats per scene
+- [ ] `@railbird/player` embeddable package
+- [ ] Support for glTF/GLB models
+- [ ] Multiple objects per scene
 - [ ] Lighting and shader presets
 
 ---

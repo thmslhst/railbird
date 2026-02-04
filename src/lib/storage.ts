@@ -1,5 +1,5 @@
 /**
- * Simple localStorage persistence for Splato.
+ * Simple localStorage persistence for Railbird.
  *
  * Design principles:
  * - Typed keys prevent typos and enable autocomplete
@@ -16,7 +16,7 @@
 import type { ControlPointData } from "@/systems/camera-rail";
 
 // Storage keys - extend this as needed
-export type StorageKey = "splato:splatUrl" | "splato:cameraRail";
+export type StorageKey = "railbird:splatUrl" | "railbird:cameraRail";
 
 // Versioned wrapper for stored data
 interface StorageEnvelope<T> {
@@ -26,8 +26,8 @@ interface StorageEnvelope<T> {
 
 // Type mapping for each key
 interface StorageSchema {
-  "splato:splatUrl": string;
-  "splato:cameraRail": ControlPointData[];
+  "railbird:splatUrl": string;
+  "railbird:cameraRail": ControlPointData[];
 }
 
 const CURRENT_VERSION = 1;
