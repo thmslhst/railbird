@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,20 +22,30 @@ export function InfoModal() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>About Railbird</DialogTitle>
+          <DialogTitle>
+            <Image
+              src="/railbird.svg"
+              alt="Railbird"
+              width={94}
+              height={36}
+              className="h-6 w-auto"
+            />
+          </DialogTitle>
           <DialogDescription>
-            A camera rail editor for scroll-driven animations
+            A camera rail editor for Three.js
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 text-sm">
           <p>
-            Railbird is a creative prototyping tool for designing scroll-driven
-            camera animations through any Three.js scene.
+            Build your rail, preview animation and
+            export for use in your own Three.js project.
           </p>
           <div className="space-y-2">
             <p className="text-muted-foreground">
               Created and developed by{" "}
-              <span className="font-medium text-foreground">Thomas Lhoest</span>
+              <span className="font-medium text-foreground">
+                <a href="https://www.thmslhst.com" target="_blank">Thomas Lhoest</a>
+              </span>
             </p>
             <a
               href="https://github.com/thmslhst/railbird"
