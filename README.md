@@ -1,6 +1,7 @@
 # Railbird
 
-Railbird is a creative prototyping tool for designing scroll-driven camera animations through any Three.js scene. Build camera rails, preview scroll-bound playback, and export configurations for use in your own projects.
+**A camera rail editor for Three.js**
+Build your rail, preview animation and export for use in your own Three.js project.
 
 ![Railbird Screenshot](public/railbird-screenshot.png)
 
