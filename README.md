@@ -1,6 +1,6 @@
 # Railbird
 
-**A camera rail editor for Three.js**. Build your rail, preview animation and export for use in your own Three.js project.
+**Camera rail editor for Three.js**. Build your rail, preview animation and export for use in your own Three.js projects.
 
 ![Railbird Screenshot](public/railbird-screenshot.png)
 
@@ -12,7 +12,7 @@
 - **Dual Viewport** — Edit in free-camera mode, preview in scroll-driven player mode
 - **Scroll-Driven Playback** — Camera position mapped to scroll progress (`t ∈ [0, 1]`)
 - **Export to JSON** — Portable configuration for integration into any Three.js project
-- **Model-Agnostic** — Works with Gaussian Splats (`.spz`, `.splat`, `.ply`), and any Three.js content
+- **Model-Agnostic** — Works with Gaussian Splats (`.spz`, `.sog`, `.ply`), and any Three.js content
 
 ---
 
