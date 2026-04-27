@@ -1,6 +1,6 @@
 # Railbird
 
-**Camera rail editor for Three.js**. Build your rail, preview animation and export for use in your own Three.js projects.
+**A scroll-driven camera rail editor for Three.js**. Build your rail, preview animation and export for use in your own Three.js projects.
 
 ![Railbird Screenshot](public/railbird-screenshot.png)
 
